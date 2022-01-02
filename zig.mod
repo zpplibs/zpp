@@ -3,6 +3,6 @@ name: zpp
 main: src/lib.zig
 license: APACHE
 description: zig + cpp interop utils
-dependencies:
 c_include_dirs:
   - include
+dependencies:
