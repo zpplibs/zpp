@@ -5,7 +5,7 @@ const c = @cImport({
 });
 
 // c calling to zig
-pub export fn zpp_array_list_u8_append(
+export fn zpp_array_list_u8_append(
     list_ptr: ?*anyopaque,
     data: [*c]u8,
     data_len: isize,
@@ -15,3 +15,6 @@ pub export fn zpp_array_list_u8_append(
     list.appendSlice(data[0..@intCast(usize, data_len)]) catch return false;
     return true;
 }
+
+/// Access this variable so the compiler won't skip codegen for this
+pub const initialized = !zpp_array_list_u8_append(null, null, 0);

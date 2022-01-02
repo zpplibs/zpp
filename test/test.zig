@@ -23,11 +23,7 @@ test "ArrayList.append" {
     defer buf.deinit();
     
     // explicity call so it would be included by the compiler 
-    try std.testing.expect(!zpp.zpp_array_list_u8_append(
-        null,
-        null,
-        0,
-    ));
+    try std.testing.expect(zpp.initialized);
     
     try u8VerifyAppend(&buf, "foo", "foo");
     try u8VerifyAppend(&buf, "bar", "foobar");
