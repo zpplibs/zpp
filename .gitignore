@@ -1,0 +1,4 @@
+/.zigmod
+/zig-*
+/target
+/dist
