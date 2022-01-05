@@ -8,7 +8,7 @@ const c = @cImport({
 export fn zpp_array_list_u8_append(
     list_ptr: ?*anyopaque,
     data: [*c]u8,
-    data_len: isize,
+    data_len: usize,
 ) callconv(.C) bool {
     if (list_ptr == null or data == null or data_len < 0) return false;
     if (data_len == 0) return true;
@@ -18,7 +18,7 @@ export fn zpp_array_list_u8_append(
         @alignCast(@alignOf(*std.ArrayList(u8)),
         list_ptr,
     ));
-    list.appendSlice(data[0..@intCast(usize, data_len)]) catch return false;
+    list.appendSlice(data[0..data_len]) catch return false;
     
     return true;
 }
