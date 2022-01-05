@@ -10,9 +10,16 @@ export fn zpp_array_list_u8_append(
     data: [*c]u8,
     data_len: isize,
 ) callconv(.C) bool {
-    if (list_ptr == null) return false;
-    var list = @ptrCast(*std.ArrayList(u8), @alignCast(@alignOf(*std.ArrayList(u8)), list_ptr));
+    if (list_ptr == null or data == null or data_len < 0) return false;
+    if (data_len == 0) return true;
+    
+    var list = @ptrCast(
+        *std.ArrayList(u8),
+        @alignCast(@alignOf(*std.ArrayList(u8)),
+        list_ptr,
+    ));
     list.appendSlice(data[0..@intCast(usize, data_len)]) catch return false;
+    
     return true;
 }
 
