@@ -1,22 +1,5 @@
 const std = @import("std");
-
-const lib_pkg = std.build.Pkg{
-    .name = "zpp", // zigmod cfg
-    .path = .{ .path = "src/lib.zig" }, //zigmod cfg
-};
-
-fn addAllTo(
-    exe: *std.build.LibExeObjStep,
-    target: std.zig.CrossTarget,
-    mode: std.builtin.Mode,
-) *std.build.LibExeObjStep {
-    exe.setTarget(target);
-    exe.setBuildMode(mode);
-    exe.addPackage(lib_pkg);
-    exe.addIncludeDir("include"); // zigmod cfg
-    exe.addIncludeDir("test"); // private
-    return exe;
-}
+const deps = @import("deps.zig");
 
 fn addTest(
     comptime root_src: []const u8,
@@ -24,6 +7,7 @@ fn addTest(
     b: *std.build.Builder,
 ) *std.build.LibExeObjStep {
     const t = b.addTest(root_src);
+    t.addIncludeDir("test"); // private
     
     b.step(
         if (test_name.len != 0) test_name else "test:" ++ root_src,
@@ -62,20 +46,20 @@ pub fn build(b: *std.build.Builder) void {
     // tests
     const test_all = b.step("test", "Run all tests");
     const tests = &[_]*std.build.LibExeObjStep{
-        addAllTo(
+        deps.addAllTo(
             addTest("test/test.zig", "test:lib", b),
-            target, mode,
+            b, target, mode,
         ),
     };
     for (tests) |t| test_all.dependOn(&t.step);
     
     // executables
-    // addAllTo(
+    // deps.addAllTo(
     //     addExecutable(
     //         "example", "src/example.zig",
     //         "run", "Run the example",
     //         b,
     //     ),
-    //     target, mode,
+    //     b, target, mode,
     // ).install();
 }

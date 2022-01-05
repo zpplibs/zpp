@@ -5,4 +5,6 @@ license: APACHE
 description: zig + cpp interop utils
 c_include_dirs:
   - include
+c_libs:
+  - zpp
 dependencies:
