@@ -31,7 +31,7 @@ pub const initialized = !zpp_array_list_u8_append(null, null, 0);
 // --------------------------------------------------
 // std::string
 
-const StdStringError = error {
+pub const StdStringError = error {
     Nullptr,
 };
 
