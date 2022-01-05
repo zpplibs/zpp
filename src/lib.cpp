@@ -1,4 +1,5 @@
 #include <zpp.h>
+#include <string>
 
 extern "C" {
 

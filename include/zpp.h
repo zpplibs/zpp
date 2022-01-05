@@ -7,7 +7,6 @@
 #else
 #include <cstddef>
 #include <cstdint>
-#include <string>
 extern "C" {
 #endif
 
