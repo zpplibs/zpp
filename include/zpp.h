@@ -24,7 +24,7 @@ zpp_array_list_u8_append(
 // ss = std::string
 
 intptr_t
-zpp_ss_new(const size_t initial_capacity);
+zpp_ss_new(const size_t min_capacity);
 
 bool
 zpp_ss_free(const intptr_t ptr);

@@ -7,9 +7,9 @@ extern "C" {
 // ss = std::string
 
 intptr_t
-zpp_ss_new(const size_t initial_capacity) {
+zpp_ss_new(const size_t min_capacity) {
     std::string* buf = new std::string();
-    if (initial_capacity > 0) buf->reserve(initial_capacity);
+    if (min_capacity > 0) buf->reserve(min_capacity);
     return (intptr_t)buf;
 }
 

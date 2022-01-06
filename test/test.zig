@@ -35,8 +35,8 @@ test "std::string api" {
     var def = zpp.initStdString(0);
     defer def.deinit();
     
-    const initial_capacity = 512;
-    var buf = zpp.initStdString(initial_capacity);
+    const min_capacity = 512;
+    var buf = zpp.initStdString(min_capacity);
     defer buf.deinit();
     
     const actual_capacity = buf.capacity();
@@ -64,7 +64,7 @@ test "std::string api" {
     try std.testing.expect('a' == slice[0]);
     
     std.debug.print(
-        "std::string api ok | capacity default: {}, set({}): {}\n",
-        .{ def.capacity(), initial_capacity, actual_capacity },
+        "std::string api ok | capacity default: {}, min: {}, actual: {}\n",
+        .{ def.capacity(), min_capacity, actual_capacity },
     );
 }

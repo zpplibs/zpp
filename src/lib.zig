@@ -84,8 +84,8 @@ pub const StdString = struct {
     }
 };
 
-pub fn initStdString(initial_capacity: usize) StdString {
+pub fn initStdString(min_capacity: usize) StdString {
     return .{
-        .ptr = c.zpp_ss_new(initial_capacity),
+        .ptr = c.zpp_ss_new(min_capacity),
     };
 }
