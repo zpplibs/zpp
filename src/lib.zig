@@ -32,6 +32,7 @@ pub const initialized = !zpp_array_list_u8_append(null, null, 0);
 // std::string
 
 pub const StdStringError = error {
+    Append,
     Nullptr,
 };
 
@@ -64,14 +65,22 @@ pub const StdString = struct {
         return if (buf == null) StdStringError.Nullptr else buf[0..len];
     }
     
+    /// Append the slice of items. Allocates more memory as necessary.
+    pub fn appendSlice(self: *StdString, items: []const u8) !void {
+        if (!c.zpp_ss_append(self.ptr,
+            @ptrCast([*c]const u8, items), items.len,
+            false,
+        )) return StdStringError.Append;
+    }
+    
     pub fn append(self: *StdString,
         data: []const u8,
         clear_before_append: bool,
-    ) bool {
-        return c.zpp_ss_append(self.ptr,
+    ) !void {
+        if (!c.zpp_ss_append(self.ptr,
             @ptrCast([*c]const u8, data), data.len,
             clear_before_append,
-        );
+        )) return StdStringError.Append;
     }
 };
 

@@ -43,12 +43,12 @@ test "std::string api" {
     try std.testing.expect(actual_capacity > 1);
     try std.testing.expect(0 == buf.size());
     
-    try std.testing.expect(buf.append("foo", false));
+    try buf.appendSlice("foo");
     try std.testing.expect(3 == buf.size());
-    try std.testing.expect(buf.append("bar", false));
+    try buf.appendSlice("bar");
     try std.testing.expect(6 == buf.size());
     
-    try std.testing.expect(buf.append("baz", true));
+    try buf.append("baz", true);
     try std.testing.expect(3 == buf.size());
     try std.testing.expect(buf.clear());
     try std.testing.expect(0 == buf.size());
