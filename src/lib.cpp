@@ -7,9 +7,15 @@ extern "C" {
 // ss = std::string
 
 intptr_t
-zpp_ss_new(const size_t min_capacity) {
+zpp_ss_new(
+    const size_t min_capacity,
+    char** data_out,
+    size_t* capacity_out
+) {
     std::string* buf = new std::string();
     if (min_capacity > 0) buf->reserve(min_capacity);
+    if (data_out != nullptr) *data_out = const_cast<char*>(buf->data());
+    if (capacity_out != nullptr) *capacity_out = buf->capacity();
     return (intptr_t)buf;
 }
 
@@ -40,10 +46,12 @@ zpp_ss_capacity(const intptr_t ptr) {
 bool
 zpp_ss_resize(const intptr_t ptr,
     const size_t size,
-    const uint8_t character
+    const uint8_t filler
 ) {
     if (ptr == 0) return false;
-    ((std::string*)ptr)->resize(size, character);
+    ((std::string*)ptr)->resize(size, filler);
+    //if (filler == 0) ((std::string*)ptr)->resize(size);
+    //else ((std::string*)ptr)->resize(size, filler);
     return true;
 }
 

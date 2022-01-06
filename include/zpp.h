@@ -24,7 +24,11 @@ zpp_array_list_u8_append(
 // ss = std::string
 
 intptr_t
-zpp_ss_new(const size_t min_capacity);
+zpp_ss_new(
+    const size_t min_capacity,
+    char** data_out,
+    size_t* capacity_out
+);
 
 bool
 zpp_ss_free(const intptr_t ptr);
@@ -42,7 +46,7 @@ zpp_ss_size(const intptr_t ptr);
 bool
 zpp_ss_resize(const intptr_t ptr,
     const size_t size,
-    const uint8_t character
+    const uint8_t filler
 );
 
 char*

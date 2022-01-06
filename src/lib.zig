@@ -31,8 +31,12 @@ pub const initialized = !zpp_array_list_u8_append(null, null, 0);
 // --------------------------------------------------
 // std::string
 
+const empty_array: [0]u8 = undefined;
+const empty_slice = empty_array[0..];
+
 pub const StdStringError = error {
     Append,
+    Resize,
     Nullptr,
 };
 
@@ -43,8 +47,8 @@ pub const StdString = struct {
         _ = c.zpp_ss_free(self.ptr);
     }
     
-    pub fn clear(self: *StdString) bool {
-        return c.zpp_ss_clear(self.ptr);
+    pub fn clearRetainingCapacity(self: *StdString) void {
+        _ = c.zpp_ss_clear(self.ptr);
     }
     
     pub fn capacity(self: *StdString) usize {
@@ -55,20 +59,28 @@ pub const StdString = struct {
         return c.zpp_ss_size(self.ptr);
     }
     
-    pub fn resize(self: *StdString, new_size: usize, filler_char: u8) bool {
-        return c.zpp_ss_resize(self.ptr, new_size, filler_char);
+    pub fn resize(self: *StdString, new_len: usize) !void {
+        if (!c.zpp_ss_resize(
+            self.ptr, new_len, 0,
+        )) return StdStringError.Resize;
     }
     
-    pub fn asSlice(self: *StdString) ![]u8 {
+    pub fn resizeAndFill(self: *StdString, new_len: usize, filler: u8) !void {
+        if (!c.zpp_ss_resize(
+            self.ptr, new_len, filler,
+        )) return StdStringError.Resize;
+    }
+    
+    pub fn items(self: *StdString) []u8 {
         var len: usize = undefined;
-        var buf = c.zpp_ss_data(self.ptr, &len);
-        return if (buf == null) StdStringError.Nullptr else buf[0..len];
+        var data = c.zpp_ss_data(self.ptr, &len);
+        return if (data == null) empty_slice else data[0..len];
     }
     
     /// Append the slice of items. Allocates more memory as necessary.
-    pub fn appendSlice(self: *StdString, items: []const u8) !void {
+    pub fn appendSlice(self: *StdString, items_: []const u8) !void {
         if (!c.zpp_ss_append(self.ptr,
-            @ptrCast([*c]const u8, items), items.len,
+            @ptrCast([*c]const u8, items_), items_.len,
             false,
         )) return StdStringError.Append;
     }
@@ -86,6 +98,93 @@ pub const StdString = struct {
 
 pub fn initStdString(min_capacity: usize) StdString {
     return .{
-        .ptr = c.zpp_ss_new(min_capacity),
+        .ptr = c.zpp_ss_new(min_capacity, null, null),
+    };
+}
+
+pub const FixedStdString = struct {
+    ptr: isize,
+    len: usize,
+    buf: []u8,
+    
+    pub fn deinit(self: *FixedStdString) void {
+        _ = c.zpp_ss_free(self.ptr);
+    }
+    
+    pub fn clearRetainingCapacity(self: *FixedStdString) void {
+        self.len = 0;
+    }
+    
+    pub fn capacity(self: *FixedStdString) usize {
+        return self.buf.len;
+    }
+    
+    pub fn size(self: *FixedStdString) usize {
+        return self.len;
+    }
+    
+    pub fn resize(self: *FixedStdString, new_len: usize) !void {
+        // if (new_len > self.buf.len) return StdStringError.Resize;
+        // self.len = new_len;
+        // std.mem.set(u8, self.buf[0..new_len], 0);
+        try self.resizeAndFill(new_len, 0);
+    }
+    
+    pub fn resizeAndFill(self: *FixedStdString, new_len: usize, filler: u8) !void {
+        if (new_len > self.buf.len) return StdStringError.Resize;
+        const prev_len = self.len;
+        if (new_len == prev_len) {
+            std.mem.set(u8, self.buf[0..new_len], filler);
+        } else if (new_len > prev_len) {
+            self.len = new_len;
+            std.mem.set(u8, self.buf[prev_len..new_len], filler);
+        } else {
+            self.len = new_len;
+        }
+    }
+    
+    pub fn items(self: *FixedStdString) []u8 {
+        return self.buf[0..self.len];
+    }
+    
+    pub fn appendSlice(self: *FixedStdString, items_: []const u8) !void {
+        if (items_.len == 0) return;
+        const new_len = self.len + items_.len;
+        if (new_len > self.buf.len) return StdStringError.Append;
+        
+        std.mem.copy(u8, self.buf[self.len..], items_);
+        self.len = new_len;
+    }
+    
+    pub fn append(self: *FixedStdString,
+        data: []const u8,
+        clear_before_append: bool,
+    ) !void {
+        if (data.len == 0) {
+            if (clear_before_append) self.len = 0;
+            return;
+        }
+        const len = if (clear_before_append) 0 else self.len;
+        const new_len = len + data.len;
+        if (new_len > self.buf.len) return StdStringError.Append;
+        
+        std.mem.copy(u8, self.buf[len..], data);
+        self.len = new_len;
+    }
+};
+
+pub fn initFixedStdString(capacity: usize, use_actual: bool) FixedStdString {
+    var min_capacity = capacity;
+    var data: [*c]u8 = undefined;
+    var ptr = c.zpp_ss_new(
+        capacity + 1, // zero-terminated
+        &data,
+        if (use_actual) &min_capacity else null,
+    );
+    data[capacity] = 0;
+    return .{
+        .ptr = ptr,
+        .len = 0,
+        .buf = data[0..min_capacity],
     };
 }
