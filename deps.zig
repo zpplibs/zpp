@@ -98,7 +98,7 @@ pub const pkgs = struct {
 
 
 // lazy
-var c_libs: [1]?*std.build.LibExeObjStep = undefined;
+var c_libs = std.mem.zeroes([1]?*std.build.LibExeObjStep);
 
 fn resolveCLibs(
     b: *std.build.Builder,
