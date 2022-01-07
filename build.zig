@@ -1,16 +1,13 @@
 const std = @import("std");
 const deps = @import("deps.zig");
 
-const mode_names = makeModeNames();
+const mode_names = blk: {
+    const fields = @typeInfo(std.builtin.Mode).Enum.fields;
+    var names: [fields.len][]const u8 = undefined;
+    inline for (fields) |field, i| names[i] = "[" ++ field.name ++ "] ";
+    break :blk names;
+};
 var mode_name_idx: usize = undefined;
-
-fn makeModeNames() [@typeInfo(std.builtin.Mode).Enum.fields.len][]const u8 {
-    var names: [@typeInfo(std.builtin.Mode).Enum.fields.len][]const u8 = undefined;
-    inline for (@typeInfo(std.builtin.Mode).Enum.fields) |field, i| {
-        names[i] = "[" ++ field.name ++ "] ";
-    }
-    return names;
-}
 
 fn addTest(
     comptime root_src: []const u8,
