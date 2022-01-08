@@ -151,6 +151,8 @@ test "std::string small capacity" {
     var buf = zpp.initStdString(min_capacity);
     defer buf.deinit();
     
+    const actual_capacity = buf.capacity();
+    
     var list = std.ArrayList(u8).init(std.testing.allocator);
     defer list.deinit();
     
@@ -164,8 +166,8 @@ test "std::string small capacity" {
     try std.testing.expectEqualSlices(u8, list.items, buf.items());
     
     std.debug.print(
-        "std::string small capacity ok | capacity min: {}, actual: {}\n",
-        .{ min_capacity, buf.capacity() },
+        "std::string small capacity ok | capacity min: {}, actual: {}, current: {}\n",
+        .{ min_capacity, actual_capacity, buf.capacity() },
     );
 }
 
@@ -174,6 +176,8 @@ test "std::string (flex) small capacity" {
     var buf = zpp.initStdString(min_capacity);
     defer buf.deinit();
     
+    const actual_capacity = buf.capacity();
+    
     var list = std.ArrayList(u8).init(std.testing.allocator);
     defer list.deinit();
     
@@ -187,7 +191,7 @@ test "std::string (flex) small capacity" {
     try std.testing.expectEqualSlices(u8, list.items, buf.items());
     
     std.debug.print(
-        "std::string (flex) small capacity ok | capacity min: {}, actual: {}\n",
-        .{ min_capacity, buf.capacity() },
+        "std::string (flex) small capacity ok | capacity min: {}, actual: {}, current: {}\n",
+        .{ min_capacity, actual_capacity, buf.capacity() },
     );
 }
