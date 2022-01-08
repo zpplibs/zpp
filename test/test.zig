@@ -195,3 +195,18 @@ test "std::string (flex) small capacity" {
         .{ min_capacity, actual_capacity, buf.capacity() },
     );
 }
+
+test "std::string (fixed) overflow" {
+    const min_capacity: usize = 16;
+    var buf = zpp.initFixedStdString(min_capacity, false);
+    defer buf.deinit();
+    
+    const to_append = "1234567890";
+    try buf.appendSlice(to_append);
+    buf.appendSlice(to_append) catch |e| {
+        try std.testing.expect(e == zpp.StdStringError.Append);
+        std.debug.print("ok\n", .{});
+        return;       
+    };
+    try std.testing.expect(false);
+}
