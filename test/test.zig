@@ -88,7 +88,7 @@ fn verifyStdString(buf: anytype) !void {
     try std.testing.expect('a' == items[3]);
 }
 
-test "ArrayList.append (from c)" {
+test "ArrayList.appendSlice from c" {
     var buf = std.ArrayList(u8).init(std.testing.allocator);
     defer buf.deinit();
     
@@ -101,7 +101,7 @@ test "ArrayList.append (from c)" {
     std.debug.print("ok\n", .{});
 }
 
-test "std::string api" {
+test "StdString api" {
     var def = zpp.initStdString(0);
     defer def.deinit();
     
@@ -118,21 +118,7 @@ test "std::string api" {
     );
 }
 
-test "std::string (fixed) api" {
-    const capacity: usize = 512;
-    var buf = zpp.initFixedStdString(capacity, false);
-    defer buf.deinit();
-    
-    try std.testing.expect(capacity == buf.capacity());
-    try verifyStdString(&buf);
-    
-    std.debug.print(
-        "ok\n  - capacity: {}\n",
-        .{ capacity },
-    );
-}
-
-test "std::string (flex) api" {
+test "FlexStdString api" {
     const capacity: usize = 512;
     var buf = zpp.initFlexStdString(capacity);
     defer buf.deinit();
@@ -146,7 +132,21 @@ test "std::string (flex) api" {
     );
 }
 
-test "std::string small capacity" {
+test "FixedStdString api" {
+    const capacity: usize = 512;
+    var buf = zpp.initFixedStdString(capacity, false);
+    defer buf.deinit();
+    
+    try std.testing.expect(capacity == buf.capacity());
+    try verifyStdString(&buf);
+    
+    std.debug.print(
+        "ok\n  - capacity: {}\n",
+        .{ capacity },
+    );
+}
+
+test "StdString small capacity" {
     const min_capacity: usize = 64;
     var buf = zpp.initStdString(min_capacity);
     defer buf.deinit();
@@ -171,7 +171,7 @@ test "std::string small capacity" {
     );
 }
 
-test "std::string (flex) small capacity" {
+test "FlexStdString small capacity" {
     const min_capacity: usize = 64;
     var buf = zpp.initFlexStdString(min_capacity);
     defer buf.deinit();
@@ -196,7 +196,7 @@ test "std::string (flex) small capacity" {
     );
 }
 
-test "std::string (fixed) overflow" {
+test "FixedStdString overflow" {
     const min_capacity: usize = 16;
     var buf = zpp.initFixedStdString(min_capacity, false);
     defer buf.deinit();
