@@ -9,11 +9,15 @@ extern "C" {
 intptr_t
 zpp_ss_new(
     const size_t min_capacity,
+    const bool resize_to_last_idx,
     char** data_out,
     size_t* capacity_out
 ) {
     auto buf = new std::string;
-    if (min_capacity > 0) buf->reserve(min_capacity);
+    if (min_capacity > 0) {
+        buf->reserve(min_capacity);
+        if (resize_to_last_idx) buf->resize(buf->capacity() - 1);
+    }
     if (data_out != nullptr) *data_out = const_cast<char*>(buf->data());
     if (capacity_out != nullptr) *capacity_out = buf->capacity();
     return (intptr_t)buf;
@@ -45,6 +49,7 @@ zpp_ss_capacity(const intptr_t ptr) {
     return ptr == 0 ? 0 : ((std::string*)ptr)->capacity();
 }
 
+/*
 size_t
 zpp_ss_inc_capacity(const intptr_t ptr,
     const size_t val,
@@ -58,6 +63,7 @@ zpp_ss_inc_capacity(const intptr_t ptr,
     if (data_out != nullptr) *data_out = const_cast<char*>(buf->data());
     return capacity;
 }
+*/
 
 bool
 zpp_ss_resize(const intptr_t ptr,

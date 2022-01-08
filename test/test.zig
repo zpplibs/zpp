@@ -105,7 +105,7 @@ test "std::string api" {
     var def = zpp.initStdString(0);
     defer def.deinit();
     
-    const min_capacity = 512;
+    const min_capacity: usize = 512;
     var buf = zpp.initStdString(min_capacity);
     defer buf.deinit();
     
@@ -119,7 +119,7 @@ test "std::string api" {
 }
 
 test "std::string (fixed) api" {
-    const capacity = 512;
+    const capacity: usize = 512;
     var buf = zpp.initFixedStdString(capacity, false);
     defer buf.deinit();
     
@@ -133,7 +133,7 @@ test "std::string (fixed) api" {
 }
 
 test "std::string (flex) api" {
-    const capacity = 512;
+    const capacity: usize = 512;
     var buf = zpp.initFlexStdString(capacity);
     defer buf.deinit();
     
@@ -147,7 +147,7 @@ test "std::string (flex) api" {
 }
 
 test "std::string small capacity" {
-    const min_capacity = 64;
+    const min_capacity: usize = 64;
     var buf = zpp.initStdString(min_capacity);
     defer buf.deinit();
     
@@ -172,8 +172,8 @@ test "std::string small capacity" {
 }
 
 test "std::string (flex) small capacity" {
-    const min_capacity = 64;
-    var buf = zpp.initStdString(min_capacity);
+    const min_capacity: usize = 64;
+    var buf = zpp.initFlexStdString(min_capacity);
     defer buf.deinit();
     
     const actual_capacity = buf.capacity();

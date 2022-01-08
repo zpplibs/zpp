@@ -76,7 +76,7 @@ pub const StdString = struct {
 
 pub fn initStdString(min_capacity: usize) StdString {
     return .{
-        .ptr = c.zpp_ss_new(min_capacity, null, null),
+        .ptr = c.zpp_ss_new(min_capacity, false, null, null),
     };
 }
 
@@ -161,6 +161,7 @@ pub fn initFixedStdString(capacity: usize, use_actual: bool) FixedStdString {
     var actual_capacity = capacity;
     const ptr = c.zpp_ss_new(
         capacity + 1, // zero-terminated
+        false,
         &data,
         if (use_actual) &actual_capacity else null,
     );
@@ -234,13 +235,20 @@ pub const FlexStdString = struct {
         if (items_.len == 0) return;
         const new_len = self.len + items_.len;
         if (new_len > self.buf.len) {
+            // var new_data: [*c]u8 = undefined;
+            // const new_capacity = c.zpp_ss_inc_capacity(
+            //     self.ptr,
+            //     new_len + 1,
+            //     &new_data,
+            // );
+            // if (new_capacity == 0) return StdStringError.Append;
+            // new_data[new_len] = 0;
+            // self.buf = new_data[0..new_capacity];
             var new_data: [*c]u8 = undefined;
-            const new_capacity = c.zpp_ss_inc_capacity(
-                self.ptr,
-                new_len + 1,
-                &new_data,
-            );
-            if (new_capacity == 0) return StdStringError.Append;
+            var new_capacity: usize = undefined;
+            if (!c.zpp_ss_resize(
+                self.ptr, new_len + 1, 0, &new_data, &new_capacity,
+            )) return StdStringError.Append;
             new_data[new_len] = 0;
             self.buf = new_data[0..new_capacity];
         }
@@ -260,13 +268,20 @@ pub const FlexStdString = struct {
         const len = if (clear_before_append) 0 else self.len;
         const new_len = len + data.len;
         if (new_len > self.buf.len) {
+            // var new_data: [*c]u8 = undefined;
+            // const new_capacity = c.zpp_ss_inc_capacity(
+            //     self.ptr,
+            //     new_len + 1,
+            //     &new_data,
+            // );
+            // if (new_capacity == 0) return StdStringError.Append;
+            // new_data[new_len] = 0;
+            // self.buf = new_data[0..new_capacity];
             var new_data: [*c]u8 = undefined;
-            const new_capacity = c.zpp_ss_inc_capacity(
-                self.ptr,
-                new_len + 1,
-                &new_data,
-            );
-            if (new_capacity == 0) return StdStringError.Append;
+            var new_capacity: usize = undefined;
+            if (!c.zpp_ss_resize(
+                self.ptr, new_len + 1, 0, &new_data, &new_capacity,
+            )) return StdStringError.Append;
             new_data[new_len] = 0;
             self.buf = new_data[0..new_capacity];
         }
@@ -281,6 +296,7 @@ pub fn initFlexStdString(min_capacity: usize) FlexStdString {
     var capacity: usize = undefined;
     const ptr = c.zpp_ss_new(
         min_capacity + 1, // zero-terminated
+        true,
         &data,
         &capacity,
     );
