@@ -31,7 +31,7 @@ zpp_ss_new(
 );
 
 bool
-zpp_ss_free(const intptr_t ptr);
+zpp_ss_free(intptr_t* ptr);
 
 /// sets the size to 0
 bool

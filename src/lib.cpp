@@ -19,10 +19,12 @@ zpp_ss_new(
     return (intptr_t)buf;
 }
 
+// avoids double-free
 bool
-zpp_ss_free(const intptr_t ptr) {
-    if (ptr == 0) return false;
-    delete (std::string*)ptr;
+zpp_ss_free(intptr_t* ptr) {
+    if (ptr == nullptr || *ptr == 0) return false;
+    delete (std::string*)*ptr;
+    *ptr = 0;
     return true;
 }
 

@@ -44,7 +44,7 @@ pub const StdString = struct {
     ptr: isize,
     
     pub fn deinit(self: *StdString) void {
-        _ = c.zpp_ss_free(self.ptr);
+        _ = c.zpp_ss_free(&self.ptr);
     }
     
     pub fn clearRetainingCapacity(self: *StdString) void {
@@ -102,13 +102,16 @@ pub fn initStdString(min_capacity: usize) StdString {
     };
 }
 
+// --------------------------------------------------
+// std::string (fixed capacity)
+
 pub const FixedStdString = struct {
     ptr: isize,
     len: usize,
     buf: []u8,
     
     pub fn deinit(self: *FixedStdString) void {
-        _ = c.zpp_ss_free(self.ptr);
+        _ = c.zpp_ss_free(&self.ptr);
     }
     
     pub fn clearRetainingCapacity(self: *FixedStdString) void {
