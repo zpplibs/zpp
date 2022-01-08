@@ -57,6 +57,7 @@ bool
 zpp_ss_resize(const intptr_t ptr,
     const size_t size,
     const uint8_t filler,
+    bool preserve_trailing_data,
     char** data_out,
     size_t* capacity_out
 );

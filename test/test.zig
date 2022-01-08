@@ -158,12 +158,15 @@ test "StdString small capacity" {
     
     const to_append = "1234567890";
     var i: usize = 0;
-    while (i < 10) : (i += 1) {
+    while (i < 100) : (i += 1) {
         try buf.appendSlice(to_append);
         try list.appendSlice(to_append);
+        
+        const b_items = buf.items();
+        const l_items = list.items;
+        
+        try std.testing.expectEqualSlices(u8, l_items, b_items);
     }
-    
-    try std.testing.expectEqualSlices(u8, list.items, buf.items());
     
     std.debug.print(
         "ok\n  - capacity min: {}, actual: {}, current: {}\n",
@@ -183,12 +186,16 @@ test "FlexStdString small capacity" {
     
     const to_append = "1234567890";
     var i: usize = 0;
-    while (i < 10) : (i += 1) {
+    while (i < 100) : (i += 1) {
         try buf.appendSlice(to_append);
         try list.appendSlice(to_append);
+        
+        const b_items = buf.items();
+        const l_items = list.items;
+        
+        //std.debug.print("\niteration: {}\n{s}\n{s}\n", .{ i, b_items, l_items });
+        try std.testing.expectEqualSlices(u8, l_items, b_items);
     }
-    
-    try std.testing.expectEqualSlices(u8, list.items, buf.items());
     
     std.debug.print(
         "ok\n  - capacity min: {}, actual: {}, current: {}\n",

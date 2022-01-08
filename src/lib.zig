@@ -43,13 +43,13 @@ pub const StdString = struct {
     
     pub fn resize(self: *StdString, new_len: usize) !void {
         if (!c.zpp_ss_resize(
-            self.ptr, new_len, 0, null, null,
+            self.ptr, new_len, 0, false, null, null,
         )) return StdStringError.Resize;
     }
     
     pub fn resizeAndFill(self: *StdString, new_len: usize, filler: u8) !void {
         if (!c.zpp_ss_resize(
-            self.ptr, new_len, filler, null, null,
+            self.ptr, new_len, filler, false, null, null,
         )) return StdStringError.Resize;
     }
     
@@ -213,7 +213,7 @@ pub const FlexStdString = struct {
             var data: [*c]u8 = undefined;
             var actual_capacity: usize = undefined;
             if (!c.zpp_ss_resize(
-                self.ptr, new_len + 1, filler, &data, &actual_capacity,
+                self.ptr, new_len + 1, filler, false, &data, &actual_capacity,
             )) return StdStringError.Resize;
             data[new_len] = 0;
             self.len = new_len;
@@ -251,7 +251,7 @@ pub const FlexStdString = struct {
             var new_data: [*c]u8 = undefined;
             var new_capacity: usize = undefined;
             if (!c.zpp_ss_resize(
-                self.ptr, new_len + 1, 0, &new_data, &new_capacity,
+                self.ptr, new_len + 1, 0, true, &new_data, &new_capacity,
             )) return StdStringError.Append;
             new_data[new_len] = 0;
             self.buf = new_data[0..new_capacity];
@@ -284,7 +284,7 @@ pub const FlexStdString = struct {
             var new_data: [*c]u8 = undefined;
             var new_capacity: usize = undefined;
             if (!c.zpp_ss_resize(
-                self.ptr, new_len + 1, 0, &new_data, &new_capacity,
+                self.ptr, new_len + 1, 0, true, &new_data, &new_capacity,
             )) return StdStringError.Append;
             new_data[new_len] = 0;
             self.buf = new_data[0..new_capacity];
