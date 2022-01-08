@@ -4,7 +4,7 @@ const deps = @import("deps.zig");
 const mode_names = blk: {
     const fields = @typeInfo(std.builtin.Mode).Enum.fields;
     var names: [fields.len][]const u8 = undefined;
-    inline for (fields) |field, i| names[i] = "[" ++ field.name ++ "] ";
+    inline for (fields) |field, i| names[i] = "[ " ++ field.name ++ " ] ";
     break :blk names;
 };
 var mode_name_idx: usize = undefined;
