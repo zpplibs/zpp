@@ -4,8 +4,9 @@ const c = @cImport({
     @cInclude("zpp.h");
 });
 
-const empty_array: [0]u8 = undefined;
-const empty_slice = empty_array[0..];
+// const empty_array: [0]u8 = undefined;
+// const empty_slice = empty_array[0..];
+const empty_slice: []u8 = "";
 
 // --------------------------------------------------
 // std::string
