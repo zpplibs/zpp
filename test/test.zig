@@ -6,16 +6,16 @@ const c = @cImport({
 });
 
 fn u8VerifyAppend(
-    list_ptr: *std.ArrayList(u8),
+    list: *std.ArrayList(u8),
     data: [:0]const u8,
     expect: []const u8,
 ) !void {
     try std.testing.expect(c.call_zpp_array_list_u8_append(
-        list_ptr,
+        list,
         data,
         data.len,
     ));
-    try std.testing.expectEqualSlices(u8, expect, list_ptr.items);
+    try std.testing.expectEqualSlices(u8, expect, list.items);
 }
 
 fn verifyStdString(buf: anytype) !void {
