@@ -8,5 +8,5 @@ zig + c/cpp interop utils
 
 ### Running the tests
 ```sh
-./build.sh test
+./test.sh
 ```
