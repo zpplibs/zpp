@@ -98,7 +98,7 @@ test "ArrayList.append (from c)" {
     try u8VerifyAppend(&buf, "foo", "foo");
     try u8VerifyAppend(&buf, "bar", "foobar");
     
-    std.debug.print("ArrayList.append ok\n", .{});
+    std.debug.print("ok\n", .{});
 }
 
 test "std::string api" {
@@ -113,7 +113,7 @@ test "std::string api" {
     try verifyStdString(&buf);
     
     std.debug.print(
-        "std::string api ok | capacity default: {}, min: {}, actual: {}\n",
+        "ok\n  - capacity default: {}, min: {}, actual: {}\n",
         .{ def.capacity(), min_capacity, actual_capacity },
     );
 }
@@ -127,7 +127,7 @@ test "std::string (fixed) api" {
     try verifyStdString(&buf);
     
     std.debug.print(
-        "std::string (fixed) ok | capacity: {}\n",
+        "ok\n  - capacity: {}\n",
         .{ capacity },
     );
 }
@@ -141,7 +141,7 @@ test "std::string (flex) api" {
     try verifyStdString(&buf);
     
     std.debug.print(
-        "std::string (flex) ok | capacity min: {}, actual: {}\n",
+        "ok\n  - capacity min: {}, actual: {}\n",
         .{ capacity, actual_capacity },
     );
 }
@@ -166,7 +166,7 @@ test "std::string small capacity" {
     try std.testing.expectEqualSlices(u8, list.items, buf.items());
     
     std.debug.print(
-        "std::string small capacity ok | capacity min: {}, actual: {}, current: {}\n",
+        "ok\n  - capacity min: {}, actual: {}, current: {}\n",
         .{ min_capacity, actual_capacity, buf.capacity() },
     );
 }
@@ -191,7 +191,7 @@ test "std::string (flex) small capacity" {
     try std.testing.expectEqualSlices(u8, list.items, buf.items());
     
     std.debug.print(
-        "std::string (flex) small capacity ok | capacity min: {}, actual: {}, current: {}\n",
+        "ok\n  - capacity min: {}, actual: {}, current: {}\n",
         .{ min_capacity, actual_capacity, buf.capacity() },
     );
 }
