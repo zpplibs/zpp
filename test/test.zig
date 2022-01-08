@@ -25,11 +25,11 @@ fn verifyStdString(buf: anytype) !void {
     
     try buf.appendSlice("foo");
     try std.testing.expect(3 == buf.size());
-    try buf.append("bar", false);
+    try buf.appendSliceOpts("bar", .{});
     try std.testing.expect(6 == buf.size());
     try std.testing.expectEqualSlices(u8, "foobar", buf.items());
     
-    try buf.append("baz!", true);
+    try buf.appendSliceOpts("baz!", .{ .clear_before_append = true });
     try std.testing.expect(4 == buf.size());
     buf.clearRetainingCapacity();
     try std.testing.expect(0 == buf.size());
@@ -196,7 +196,7 @@ test "FlexStdString small capacity" {
     );
 }
 
-test "FixedStdString overflow" {
+test "FixedStdString.appendSlice overflow" {
     const min_capacity: usize = 16;
     var buf = zpp.initFixedStdString(min_capacity, false);
     defer buf.deinit();

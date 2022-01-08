@@ -16,6 +16,10 @@ pub const StdStringError = error {
     Nullptr,
 };
 
+pub const AppendOpts = struct {
+    clear_before_append: bool = false,
+};
+
 /// Best for reading/processing data coming from c++.
 /// If you must also write to the buffer, consider using `FlexStdString`.
 pub const StdString = struct {
@@ -63,13 +67,13 @@ pub const StdString = struct {
         )) return StdStringError.Append;
     }
     
-    pub fn append(self: *StdString,
+    pub fn appendSliceOpts(self: *StdString,
         data: []const u8,
-        clear_before_append: bool,
+        opts: AppendOpts,
     ) !void {
         if (!c.zpp_ss_append(self.ptr,
             @ptrCast([*c]const u8, data), data.len,
-            clear_before_append,
+            opts.clear_before_append,
         )) return StdStringError.Append;
     }
 };
@@ -139,15 +143,15 @@ pub const FixedStdString = struct {
         self.len = new_len;
     }
     
-    pub fn append(self: *FixedStdString,
+    pub fn appendSliceOpts(self: *FixedStdString,
         data: []const u8,
-        clear_before_append: bool,
+        opts: AppendOpts,
     ) !void {
         if (data.len == 0) {
-            if (clear_before_append) self.len = 0;
+            if (opts.clear_before_append) self.len = 0;
             return;
         }
-        const len = if (clear_before_append) 0 else self.len;
+        const len = if (opts.clear_before_append) 0 else self.len;
         const new_len = len + data.len;
         if (new_len > self.buf.len) return StdStringError.Append;
         
@@ -257,15 +261,15 @@ pub const FlexStdString = struct {
         self.len = new_len;
     }
     
-    pub fn append(self: *FlexStdString,
+    pub fn appendSliceOpts(self: *FlexStdString,
         data: []const u8,
-        clear_before_append: bool,
+        opts: AppendOpts,
     ) !void {
         if (data.len == 0) {
-            if (clear_before_append) self.len = 0;
+            if (opts.clear_before_append) self.len = 0;
             return;
         }
-        const len = if (clear_before_append) 0 else self.len;
+        const len = if (opts.clear_before_append) 0 else self.len;
         const new_len = len + data.len;
         if (new_len > self.buf.len) {
             // var new_data: [*c]u8 = undefined;
