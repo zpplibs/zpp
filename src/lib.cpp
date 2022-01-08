@@ -12,7 +12,7 @@ zpp_ss_new(
     char** data_out,
     size_t* capacity_out
 ) {
-    std::string* buf = new std::string();
+    auto buf = new std::string;
     if (min_capacity > 0) buf->reserve(min_capacity);
     if (data_out != nullptr) *data_out = const_cast<char*>(buf->data());
     if (capacity_out != nullptr) *capacity_out = buf->capacity();
@@ -45,15 +45,34 @@ zpp_ss_capacity(const intptr_t ptr) {
     return ptr == 0 ? 0 : ((std::string*)ptr)->capacity();
 }
 
+size_t
+zpp_ss_inc_capacity(const intptr_t ptr,
+    const size_t val,
+    char** data_out
+) {
+    if (ptr == 0) return 0;
+    auto buf = (std::string*)ptr;
+    size_t capacity = buf->capacity();
+    capacity += val;
+    buf->reserve(capacity);
+    if (data_out != nullptr) *data_out = const_cast<char*>(buf->data());
+    return capacity;
+}
+
 bool
 zpp_ss_resize(const intptr_t ptr,
     const size_t size,
-    const uint8_t filler
+    const uint8_t filler,
+    char** data_out,
+    size_t* capacity_out
 ) {
     if (ptr == 0) return false;
-    ((std::string*)ptr)->resize(size, filler);
-    //if (filler == 0) ((std::string*)ptr)->resize(size);
-    //else ((std::string*)ptr)->resize(size, filler);
+    auto buf = (std::string*)ptr;
+    buf->resize(size, filler);
+    //if (filler == 0) buf->resize(size);
+    //else buf->resize(size, filler);
+    if (data_out != nullptr) *data_out = const_cast<char*>(buf->data());
+    if (capacity_out != nullptr) *capacity_out = buf->capacity();
     return true;
 }
 

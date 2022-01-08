@@ -38,15 +38,24 @@ bool
 zpp_ss_clear(const intptr_t ptr);
 
 size_t
-zpp_ss_capacity(const intptr_t ptr);
+zpp_ss_size(const intptr_t ptr);
 
 size_t
-zpp_ss_size(const intptr_t ptr);
+zpp_ss_capacity(const intptr_t ptr);
+
+/// increment the capacity by the value provided
+size_t
+zpp_ss_inc_capacity(const intptr_t ptr,
+    const size_t val,
+    char** data_out
+);
 
 bool
 zpp_ss_resize(const intptr_t ptr,
     const size_t size,
-    const uint8_t filler
+    const uint8_t filler,
+    char** data_out,
+    size_t* capacity_out
 );
 
 char*

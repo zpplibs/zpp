@@ -131,3 +131,63 @@ test "std::string (fixed) api" {
         .{ capacity },
     );
 }
+
+test "std::string (flex) api" {
+    const capacity = 512;
+    var buf = zpp.initFlexStdString(capacity);
+    defer buf.deinit();
+    
+    const actual_capacity = buf.capacity();
+    try verifyStdString(&buf);
+    
+    std.debug.print(
+        "std::string (flex) ok | capacity min: {}, actual: {}\n",
+        .{ capacity, actual_capacity },
+    );
+}
+
+test "std::string small capacity" {
+    const min_capacity = 64;
+    var buf = zpp.initStdString(min_capacity);
+    defer buf.deinit();
+    
+    var list = std.ArrayList(u8).init(std.testing.allocator);
+    defer list.deinit();
+    
+    const to_append = "1234567890";
+    var i: usize = 0;
+    while (i < 10) : (i += 1) {
+        try buf.appendSlice(to_append);
+        try list.appendSlice(to_append);
+    }
+    
+    try std.testing.expectEqualSlices(u8, list.items, buf.items());
+    
+    std.debug.print(
+        "std::string small capacity ok | capacity min: {}, actual: {}\n",
+        .{ min_capacity, buf.capacity() },
+    );
+}
+
+test "std::string (flex) small capacity" {
+    const min_capacity = 64;
+    var buf = zpp.initStdString(min_capacity);
+    defer buf.deinit();
+    
+    var list = std.ArrayList(u8).init(std.testing.allocator);
+    defer list.deinit();
+    
+    const to_append = "1234567890";
+    var i: usize = 0;
+    while (i < 10) : (i += 1) {
+        try buf.appendSlice(to_append);
+        try list.appendSlice(to_append);
+    }
+    
+    try std.testing.expectEqualSlices(u8, list.items, buf.items());
+    
+    std.debug.print(
+        "std::string (flex) small capacity ok | capacity min: {}, actual: {}\n",
+        .{ min_capacity, buf.capacity() },
+    );
+}
