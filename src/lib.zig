@@ -16,6 +16,8 @@ pub const StdStringError = error {
     Nullptr,
 };
 
+/// Best for reading/processing data coming from c++.
+/// If you must also write to the buffer, consider using `FlexStdString`.
 pub const StdString = struct {
     ptr: isize,
     
@@ -81,6 +83,8 @@ pub fn initStdString(min_capacity: usize) StdString {
 // --------------------------------------------------
 // std::string (fixed capacity)
 
+/// Best for writing data to be consumed by c++.
+/// The capacity is fixed/static.
 pub const FixedStdString = struct {
     ptr: isize,
     len: usize,
@@ -170,8 +174,10 @@ pub fn initFixedStdString(capacity: usize, use_actual: bool) FixedStdString {
 }
 
 // --------------------------------------------------
-// std::string (flex - the speed of fixed but can grow the capacity)
+// std::string (flex capacity)
 
+/// Best for writing data to be consumed by c++.
+/// Similar to `FixedStdString` in terms of efficiency but can grow the capacity.
 pub const FlexStdString = struct {
     ptr: isize,
     len: usize,
