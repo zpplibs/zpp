@@ -317,7 +317,7 @@ pub fn initFlexStdString(min_capacity: usize) FlexStdString {
 // --------------------------------------------------
 // c calling to zig
 
-export fn zpp_array_list_u8_append(
+export fn zpp_array_list_u8_append_slice(
     list_ptr: ?*anyopaque,
     data: [*c]u8,
     data_len: usize,
@@ -336,4 +336,4 @@ export fn zpp_array_list_u8_append(
 }
 
 /// Access this variable so the compiler won't skip codegen for this
-pub const initialized = !zpp_array_list_u8_append(null, null, 0);
+pub const initialized = !zpp_array_list_u8_append_slice(null, null, 0);

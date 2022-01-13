@@ -7,12 +7,12 @@ extern "C" {
 #endif
 
 // c calling to zig
-inline bool call_zpp_array_list_u8_append(
+inline bool call_zpp_array_list_u8_append_slice(
     void* list_ptr,
     const char* data,
     const size_t data_len
 ) {
-    return zpp_array_list_u8_append(
+    return zpp_array_list_u8_append_slice(
         list_ptr,
         data,
         data_len

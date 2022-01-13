@@ -10,7 +10,7 @@ fn u8VerifyAppend(
     data: [:0]const u8,
     expect: []const u8,
 ) !void {
-    try std.testing.expect(c.call_zpp_array_list_u8_append(
+    try std.testing.expect(c.call_zpp_array_list_u8_append_slice(
         list,
         data,
         data.len,
