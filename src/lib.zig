@@ -63,7 +63,7 @@ pub const StdString = struct {
     /// Append the slice of items. Allocates more memory as necessary.
     pub fn appendSlice(self: *StdString, items_: []const u8) !void {
         if (!c.zpp_ss_append(self.ptr,
-            @ptrCast([*c]const u8, items_), items_.len,
+            items_.ptr, items_.len,
             false,
         )) return StdStringError.Append;
     }
@@ -73,7 +73,7 @@ pub const StdString = struct {
         opts: AppendOpts,
     ) !void {
         if (!c.zpp_ss_append(self.ptr,
-            @ptrCast([*c]const u8, data), data.len,
+            data.ptr, data.len,
             opts.clear_before_append,
         )) return StdStringError.Append;
     }
