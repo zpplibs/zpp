@@ -77,8 +77,7 @@ zpp_ss_resize(const intptr_t ptr,
     auto buf = (std::string*)ptr;
     if (preserve_trailing_data) {
         auto current_size = buf->size();
-        auto current_capacity = buf->capacity();
-        auto copy_len = current_capacity - current_size;
+        auto copy_len = buf->capacity() - current_size;
         if (copy_len > 0) buf->append(buf->data() + current_size, copy_len);
     }
     buf->resize(size, filler);
