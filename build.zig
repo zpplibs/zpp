@@ -1,8 +1,42 @@
 const std = @import("std");
 
+const c_flags = &[_][]const u8{"-std=c99"};
+
+const SourceType = struct {
+    withExe: bool,
+    withTest: bool,
+    const both: SourceType = .{ .withExe = true, .withTest = true };
+    const exeOnly: SourceType = .{ .withExe = true, .withTest = false };
+    const testOnly: SourceType = .{ .withExe = false, .withTest = true };
+};
+
+const BuildModule = struct {
+    b: *std.Build,
+    tests: *std.Build.Step,
+    target: std.Build.ResolvedTarget,
+    optimize: std.builtin.OptimizeMode,
+    optimize_idx: usize,
+};
+
+const optimize_names = blk: {
+    // const fields = @typeInfo(std.builtin.OptimizeMode).Enum.fields;
+    const fields = std.meta.fields(std.builtin.OptimizeMode);
+    var names: [fields.len][]const u8 = undefined;
+    for (fields, 0..) |field, i| names[i] = field.name;
+    break :blk names;
+};
+
 pub fn build(b: *std.Build) void {
     const target = b.standardTargetOptions(.{});
     const optimize = b.standardOptimizeOption(.{});
+
+    var bm: BuildModule = .{
+        .b = b,
+        .tests = b.step("test", "Run all tests"),
+        .target = target,
+        .optimize = optimize,
+        .optimize_idx = @intFromEnum(optimize),
+    };
 
     const zpp = b.addModule("zpp", .{
         .root_source_file = b.path("src/lib.zig"),
@@ -65,9 +99,101 @@ pub fn build(b: *std.Build) void {
         //     .optimize = optimize,
         // }).createModule());
 
-        const run_test = b.addRunArtifact(lib_test);
-
-        const test_step = b.step("test", "Run unit tests");
-        test_step.dependOn(&run_test.step);
+        bm.tests.dependOn(&b.addRunArtifact(lib_test).step);
     }
+    {
+        const hello = addModuleTo(&bm, .exeOnly, "examples/hello.zig", "");
+        hello.addImport("zpp", zpp);
+    }
+}
+
+fn addModuleTo(
+    bm: *BuildModule,
+    comptime sourceType: SourceType,
+    comptime root_src: []const u8,
+    comptime run_name: []const u8,
+) *std.Build.Module {
+    const is_zig = std.mem.endsWith(u8, root_src, ".zig");
+
+    if (!sourceType.withTest and !sourceType.withExe) @panic("Must atleast be exe or test.");
+    if (!is_zig and sourceType.withTest) @panic("Tests can only be in .zig files");
+
+    const name = comptime resolveSrcName(root_src);
+
+    const b = bm.b;
+
+    const mod = b.createModule(.{
+        .root_source_file = .{
+            .src_path = .{
+                .owner = b,
+                .sub_path = root_src,
+            },
+        },
+        .target = bm.target,
+        .optimize = bm.optimize,
+    });
+    // mod.addOptions("build_options", bm.build_options);
+
+    if (sourceType.withExe) {
+        const exe_name = if (bm.optimize == .ReleaseFast) name else concat(b, name ++ "--", optimize_names[bm.optimize_idx], name);
+        const exe = b.addExecutable(.{
+            .name = exe_name,
+            .root_module = mod,
+        });
+
+        if (!is_zig) {
+            exe.addCSourceFile(.{
+                .file = .{ .src_path = .{
+                    .owner = b,
+                    .sub_path = root_src,
+                } },
+                .flags = c_flags,
+            });
+        }
+        const run_cmd = b.addRunArtifact(exe);
+        run_cmd.step.dependOn(b.getInstallStep());
+        if (b.args) |args| run_cmd.addArgs(args);
+
+        b.step(
+            if (run_name.len != 0) run_name else "run:" ++ name,
+            "Run executable from " ++ root_src,
+        ).dependOn(&run_cmd.step);
+
+        b.installArtifact(exe);
+    }
+    if (is_zig and sourceType.withTest) {
+        const prefix = name ++ "--test--";
+        const test_name = concat(b, prefix, optimize_names[bm.optimize_idx], prefix);
+        const t = b.addTest(.{
+            .name = test_name,
+            .root_module = mod,
+        });
+
+        b.step(
+            "test:" ++ name,
+            "Run tests from " ++ root_src,
+        ).dependOn(&b.addRunArtifact(t).step);
+
+        b.installArtifact(t);
+        bm.tests.dependOn(&b.addRunArtifact(t).step);
+    }
+    return mod;
+}
+
+fn resolveSrcName(src: []const u8) []const u8 {
+    const slashIdx = std.mem.lastIndexOf(u8, src, "/");
+    const start = if (slashIdx) |idx| idx + 1 else 0;
+    const dotIdx = std.mem.indexOf(
+        u8,
+        if (start == 0) src else src[start..],
+        ".",
+    ) orelse 0;
+    return if (start != 0 and dotIdx != 0) src[start .. start + dotIdx] else src;
+}
+
+fn concat(b: *std.Build, prefix: []const u8, suffix: []const u8, def: []const u8) []const u8 {
+    const out = b.allocator.alloc(u8, prefix.len + suffix.len) catch return def;
+    @memcpy(out[0..prefix.len], prefix);
+    @memcpy(out[prefix.len..], suffix);
+    return out;
 }
