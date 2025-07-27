@@ -1,75 +1,73 @@
 const std = @import("std");
-const deps = @import("deps.zig");
 
-const mode_names = blk: {
-    const fields = @typeInfo(std.builtin.Mode).Enum.fields;
-    var names: [fields.len][]const u8 = undefined;
-    inline for (fields) |field, i| names[i] = "[ " ++ field.name ++ " ] ";
-    break :blk names;
-};
-var mode_name_idx: usize = undefined;
-
-fn addTest(
-    comptime root_src: []const u8,
-    test_name: []const u8,
-    b: *std.build.Builder,
-) *std.build.LibExeObjStep {
-    const t = b.addTest(root_src);
-    t.setNamePrefix(mode_names[mode_name_idx]);
-    
-    t.addIncludeDir("test"); // private
-    
-    b.step(
-        if (test_name.len != 0) test_name else "test:" ++ root_src,
-        "Run tests from " ++ root_src,
-    ).dependOn(&t.step);
-    
-    return t;
-}
-
-// fn addExecutable(
-//     comptime name: []const u8,
-//     root_src: []const u8,
-//     run_name: []const u8,
-//     run_description: []const u8,
-//     b: *std.build.Builder,
-// ) *std.build.LibExeObjStep {
-//     const exe = b.addExecutable(name, root_src);
-    
-//     const run_cmd = exe.run();
-//     run_cmd.step.dependOn(b.getInstallStep());
-//     if (b.args) |args| run_cmd.addArgs(args);
-    
-//     b.step(
-//         if (run_name.len != 0) run_name else "run:" ++ name,
-//         if (run_description.len != 0) run_description else "Run " ++ name,
-//     ).dependOn(&run_cmd.step);
-    
-//     return exe;
-// }
-
-pub fn build(b: *std.build.Builder) void {
+pub fn build(b: *std.Build) void {
     const target = b.standardTargetOptions(.{});
-    const mode = b.standardReleaseOptions();
-    mode_name_idx = @enumToInt(mode);
-    
-    // tests
-    const test_all = b.step("test", "Run all tests");
-    const tests = &[_]*std.build.LibExeObjStep{
-        deps.addAllTo(
-            addTest("test/test.zig", "test:lib", b),
-            b, target, mode,
-        ),
-    };
-    for (tests) |t| test_all.dependOn(&t.step);
-    
-    // executables
-    // deps.addAllTo(
-    //     addExecutable(
-    //         "example", "src/example.zig",
-    //         "run", "Run the example",
-    //         b,
-    //     ),
-    //     b, target, mode,
-    // ).install();
+    const optimize = b.standardOptimizeOption(.{});
+
+    const zpp = b.addModule("zpp", .{
+        .root_source_file = b.path("src/lib.zig"),
+        .target = target,
+        .optimize = optimize,
+    });
+
+    const cpp_header = b.path("include/zpp.h");
+
+    const cpp_lib = b.addStaticLibrary(.{
+        .name = "zpp",
+        .target = target,
+        .optimize = optimize,
+    });
+    cpp_lib.addIncludePath(b.path("include"));
+    cpp_lib.linkLibCpp();
+    cpp_lib.installHeader(cpp_header, "zpp.h");
+
+    cpp_lib.addCSourceFiles(.{
+        .files = &.{
+            "lib.cpp",
+        },
+        .root = b.path("src"),
+    });
+    b.installArtifact(cpp_lib);
+
+    b.default_step.dependOn(&b.addInstallHeaderFile(
+        cpp_header,
+        "zpp.h",
+    ).step);
+
+    zpp.linkLibrary(cpp_lib);
+
+    zpp.addImport("zpp_clib", b.addTranslateC(.{
+        .root_source_file = cpp_header,
+        .target = target,
+        .optimize = optimize,
+    }).createModule());
+
+    {
+        // Setup Tests
+        // const test_header = b.path("test/zpp-test.h");
+        const lib_test = b.addTest(.{
+            // .root_module = zpp,
+            .root_source_file = b.path("test/test.zig"),
+            .filters = b.option(
+                []const []const u8,
+                "test-filter",
+                "test-filter",
+            ) orelse &.{},
+            // .test_runner = .{ .path = b.path("test_runner.zig"), .mode = .simple },
+        });
+        lib_test.root_module.addImport("zpp", zpp);
+        lib_test.addIncludePath(b.path("test"));
+        lib_test.addIncludePath(b.path("include"));
+
+        // lib_test.addImport("zpp_testlib", b.addTranslateC(.{
+        //     .root_source_file = test_header,
+        //     .target = target,
+        //     .optimize = optimize,
+        // }).createModule());
+
+        const run_test = b.addRunArtifact(lib_test);
+
+        const test_step = b.step("test", "Run unit tests");
+        test_step.dependOn(&run_test.step);
+    }
 }

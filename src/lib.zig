@@ -11,7 +11,7 @@ const empty_slice: []u8 = "";
 // --------------------------------------------------
 // std::string
 
-pub const StdStringError = error {
+pub const StdStringError = error{
     Append,
     Resize,
     Nullptr,
@@ -25,55 +25,70 @@ pub const AppendOpts = struct {
 /// If you must also write to the buffer, consider using `FlexStdString`.
 pub const StdString = struct {
     ptr: isize,
-    
+
     pub fn deinit(self: *StdString) void {
         _ = c.zpp_ss_free(&self.ptr);
     }
-    
+
     pub fn clearRetainingCapacity(self: *StdString) void {
         _ = c.zpp_ss_clear(self.ptr);
     }
-    
+
     pub fn capacity(self: *StdString) usize {
         return c.zpp_ss_capacity(self.ptr);
     }
-    
+
     pub fn size(self: *StdString) usize {
         return c.zpp_ss_size(self.ptr);
     }
-    
+
     pub fn resize(self: *StdString, new_len: usize) !void {
         if (!c.zpp_ss_resize(
-            self.ptr, new_len, 0, false, null, null,
+            self.ptr,
+            new_len,
+            0,
+            false,
+            null,
+            null,
         )) return StdStringError.Resize;
     }
-    
+
     pub fn resizeAndFill(self: *StdString, new_len: usize, filler: u8) !void {
         if (!c.zpp_ss_resize(
-            self.ptr, new_len, filler, false, null, null,
+            self.ptr,
+            new_len,
+            filler,
+            false,
+            null,
+            null,
         )) return StdStringError.Resize;
     }
-    
+
     pub fn items(self: *StdString) []u8 {
         var len: usize = undefined;
         var data = c.zpp_ss_data(self.ptr, &len);
         return if (data == null) empty_slice else data[0..len];
     }
-    
+
     /// Append the slice of items. Allocates more memory as necessary.
     pub fn appendSlice(self: *StdString, items_: []const u8) !void {
-        if (!c.zpp_ss_append(self.ptr,
-            items_.ptr, items_.len,
+        if (!c.zpp_ss_append(
+            self.ptr,
+            items_.ptr,
+            items_.len,
             false,
         )) return StdStringError.Append;
     }
-    
-    pub fn appendSliceOpts(self: *StdString,
+
+    pub fn appendSliceOpts(
+        self: *StdString,
         data: []const u8,
         opts: AppendOpts,
     ) !void {
-        if (!c.zpp_ss_append(self.ptr,
-            data.ptr, data.len,
+        if (!c.zpp_ss_append(
+            self.ptr,
+            data.ptr,
+            data.len,
             opts.clear_before_append,
         )) return StdStringError.Append;
     }
@@ -94,57 +109,58 @@ pub const FixedStdString = struct {
     ptr: isize,
     len: usize,
     buf: []u8,
-    
+
     pub fn deinit(self: *FixedStdString) void {
         _ = c.zpp_ss_free(&self.ptr);
     }
-    
+
     pub fn clearRetainingCapacity(self: *FixedStdString) void {
         self.len = 0;
     }
-    
+
     pub fn capacity(self: *FixedStdString) usize {
         return self.buf.len;
     }
-    
+
     pub fn size(self: *FixedStdString) usize {
         return self.len;
     }
-    
+
     pub fn resize(self: *FixedStdString, new_len: usize) !void {
         // if (new_len > self.buf.len) return StdStringError.Resize;
         // self.len = new_len;
-        // std.mem.set(u8, self.buf[0..new_len], 0);
+        // @memset(self.buf[0..new_len], 0);
         try self.resizeAndFill(new_len, 0);
     }
-    
+
     pub fn resizeAndFill(self: *FixedStdString, new_len: usize, filler: u8) !void {
         if (new_len > self.buf.len) return StdStringError.Resize;
         const prev_len = self.len;
         if (new_len == prev_len) {
-            std.mem.set(u8, self.buf[0..new_len], filler);
+            @memset(self.buf[0..new_len], filler);
         } else if (new_len > prev_len) {
             self.len = new_len;
-            std.mem.set(u8, self.buf[prev_len..new_len], filler);
+            @memset(self.buf[prev_len..new_len], filler);
         } else {
             self.len = new_len;
         }
     }
-    
+
     pub fn items(self: *FixedStdString) []u8 {
         return self.buf[0..self.len];
     }
-    
+
     pub fn appendSlice(self: *FixedStdString, items_: []const u8) !void {
         if (items_.len == 0) return;
         const new_len = self.len + items_.len;
         if (new_len > self.buf.len) return StdStringError.Append;
-        
-        std.mem.copy(u8, self.buf[self.len..], items_);
+
+        @memcpy(self.buf[self.len .. self.len + items_.len], items_);
         self.len = new_len;
     }
-    
-    pub fn appendSliceOpts(self: *FixedStdString,
+
+    pub fn appendSliceOpts(
+        self: *FixedStdString,
         data: []const u8,
         opts: AppendOpts,
     ) !void {
@@ -155,8 +171,8 @@ pub const FixedStdString = struct {
         const len = if (opts.clear_before_append) 0 else self.len;
         const new_len = len + data.len;
         if (new_len > self.buf.len) return StdStringError.Append;
-        
-        std.mem.copy(u8, self.buf[len..], data);
+
+        @memcpy(self.buf[len .. len + data.len], data);
         self.len = new_len;
     }
 };
@@ -186,33 +202,38 @@ pub const FlexStdString = struct {
     ptr: isize,
     len: usize,
     buf: []u8,
-    
+
     pub fn deinit(self: *FlexStdString) void {
         _ = c.zpp_ss_free(&self.ptr);
     }
-    
+
     pub fn clearRetainingCapacity(self: *FlexStdString) void {
         self.len = 0;
     }
-    
+
     pub fn capacity(self: *FlexStdString) usize {
         return self.buf.len;
     }
-    
+
     pub fn size(self: *FlexStdString) usize {
         return self.len;
     }
-    
+
     pub fn resize(self: *FlexStdString, new_len: usize) !void {
         try self.resizeAndFill(new_len, 0);
     }
-    
+
     pub fn resizeAndFill(self: *FlexStdString, new_len: usize, filler: u8) !void {
         if (new_len > self.buf.len) {
             var data: [*c]u8 = undefined;
             var actual_capacity: usize = undefined;
             if (!c.zpp_ss_resize(
-                self.ptr, new_len, filler, false, &data, &actual_capacity,
+                self.ptr,
+                new_len,
+                filler,
+                false,
+                &data,
+                &actual_capacity,
             )) return StdStringError.Resize;
             self.len = new_len;
             self.buf = data[0..actual_capacity];
@@ -220,19 +241,19 @@ pub const FlexStdString = struct {
         }
         const prev_len = self.len;
         if (new_len == prev_len) {
-            std.mem.set(u8, self.buf[0..new_len], filler);
+            @memset(self.buf[0..new_len], filler);
         } else if (new_len > prev_len) {
             self.len = new_len;
-            std.mem.set(u8, self.buf[prev_len..new_len], filler);
+            @memset(self.buf[prev_len..new_len], filler);
         } else {
             self.len = new_len;
         }
     }
-    
+
     pub fn items(self: *FlexStdString) []u8 {
         return self.buf[0..self.len];
     }
-    
+
     pub fn appendSlice(self: *FlexStdString, items_: []const u8) !void {
         if (items_.len == 0) return;
         const new_len = self.len + items_.len;
@@ -248,16 +269,22 @@ pub const FlexStdString = struct {
             var new_data: [*c]u8 = undefined;
             var new_capacity: usize = undefined;
             if (!c.zpp_ss_resize(
-                self.ptr, new_len, 0, true, &new_data, &new_capacity,
+                self.ptr,
+                new_len,
+                0,
+                true,
+                &new_data,
+                &new_capacity,
             )) return StdStringError.Append;
             self.buf = new_data[0..new_capacity];
         }
-        
-        std.mem.copy(u8, self.buf[self.len..], items_);
+
+        @memcpy(self.buf[self.len .. self.len + items_.len], items_);
         self.len = new_len;
     }
-    
-    pub fn appendSliceOpts(self: *FlexStdString,
+
+    pub fn appendSliceOpts(
+        self: *FlexStdString,
         data: []const u8,
         opts: AppendOpts,
     ) !void {
@@ -279,12 +306,17 @@ pub const FlexStdString = struct {
             var new_data: [*c]u8 = undefined;
             var new_capacity: usize = undefined;
             if (!c.zpp_ss_resize(
-                self.ptr, new_len, 0, true, &new_data, &new_capacity,
+                self.ptr,
+                new_len,
+                0,
+                true,
+                &new_data,
+                &new_capacity,
             )) return StdStringError.Append;
             self.buf = new_data[0..new_capacity];
         }
-        
-        std.mem.copy(u8, self.buf[len..], data);
+
+        @memcpy(self.buf[len .. len + data.len], data);
         self.len = new_len;
     }
 };
@@ -315,14 +347,16 @@ export fn zpp_array_list_u8_append_slice(
 ) callconv(.C) bool {
     if (list_ptr == null or data == null or data_len < 0) return false;
     if (data_len == 0) return true;
-    
-    var list = @ptrCast(
-        *std.ArrayList(u8),
-        @alignCast(@alignOf(*std.ArrayList(u8)),
-        list_ptr,
-    ));
+
+    // var list = @ptrCast(
+    //     *std.ArrayList(u8),
+    //     @alignCast(@alignOf(*std.ArrayList(u8)),
+    //     list_ptr,
+    // ));
+
+    var list: *std.ArrayList(u8) = @ptrCast(@alignCast(list_ptr));
     list.appendSlice(data[0..data_len]) catch return false;
-    
+
     return true;
 }
 
