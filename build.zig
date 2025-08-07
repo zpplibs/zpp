@@ -225,7 +225,7 @@ pub fn build(b: *std.Build) void {
     // const test_header = b.path("test/zpp-test.h");
     const lib_test = b.addTest(.{
         // .root_module = zpp,
-        .root_source_file = b.path("test/test.zig"),
+        .root_source_file = b.path("tests/test.zig"),
         .filters = b.option(
             []const []const u8,
             "test-filter",
@@ -234,7 +234,7 @@ pub fn build(b: *std.Build) void {
         // .test_runner = .{ .path = b.path("test_runner.zig"), .mode = .simple },
     });
     lib_test.root_module.addImport("zpp", zpp);
-    lib_test.addIncludePath(b.path("test"));
+    lib_test.addIncludePath(b.path("tests"));
     lib_test.addIncludePath(b.path("include"));
 
     // lib_test.addImport("zpp_testlib", b.addTranslateC(.{
