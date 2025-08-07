@@ -29,7 +29,12 @@ const optimize_names = blk: {
     break :blk names;
 };
 
-const c_flags = &[_][]const u8{"-std=c99"};
+const c_flags = &[_][]const u8{
+    "-Wall",
+    "-Wextra",
+    "-Werror",
+    "-DNDEBUG",
+};
 
 fn resolveSrcName(src: []const u8) []const u8 {
     const slash_idx = std.mem.lastIndexOf(u8, src, "/");
@@ -196,10 +201,11 @@ pub fn build(b: *std.Build) void {
     cpp_lib.installHeader(cpp_header, "zpp.h");
 
     cpp_lib.addCSourceFiles(.{
+        .root = b.path("src"),
         .files = &.{
             "lib.cpp",
         },
-        .root = b.path("src"),
+        .flags = c_flags,
     });
     b.installArtifact(cpp_lib);
 
