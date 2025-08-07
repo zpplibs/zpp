@@ -1,0 +1,13 @@
+.{
+    .name = .zpp,
+    .version = "0.1.0",
+    .fingerprint = 0xd91d3c5e1a3248e0,
+    .minimum_zig_version = "0.14.0",
+    .dependencies = .{},
+    .paths = .{
+        "build.zig",
+        "build.zig.zon",
+        "src",
+        "include",
+    },
+}
