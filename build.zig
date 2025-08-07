@@ -93,6 +93,11 @@ fn addModuleTo(
                 } },
                 .flags = c_flags,
             });
+            if (std.mem.endsWith(u8, root_src, ".c")) {
+                exe.linkLibC();
+            } else {
+                exe.linkLibCpp();
+            }
         }
         const run_cmd = b.addRunArtifact(exe);
         run_cmd.step.dependOn(b.getInstallStep());
@@ -104,7 +109,6 @@ fn addModuleTo(
         ).dependOn(&run_cmd.step);
 
         b.installArtifact(exe);
-        addAllTo(exe);
     }
     if (is_zig and source_type.with_test) {
         const prefix = name ++ "--test--";
@@ -120,18 +124,9 @@ fn addModuleTo(
         ).dependOn(&b.addRunArtifact(t).step);
 
         b.installArtifact(t);
-        addAllTo(t);
         bm.tests.dependOn(&b.addRunArtifact(t).step);
     }
     return mod;
-}
-
-fn addAllTo(
-    exe: *std.Build.Step.Compile,
-) void {
-    //exe.setTarget(target);
-    //exe.setBuildMode(mode);
-    exe.linkLibC();
 }
 
 pub fn parseGitRevHead(a: std.mem.Allocator) ![]const u8 {
