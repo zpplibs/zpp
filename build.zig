@@ -1,21 +1,24 @@
 const std = @import("std");
 
-const c_flags = &[_][]const u8{"-std=c99"};
+const ModuleMap = std.StringHashMap(*std.Build.Module);
 
 const SourceType = struct {
-    withExe: bool,
-    withTest: bool,
-    const both: SourceType = .{ .withExe = true, .withTest = true };
-    const exeOnly: SourceType = .{ .withExe = true, .withTest = false };
-    const testOnly: SourceType = .{ .withExe = false, .withTest = true };
+    with_exe: bool,
+    with_test: bool,
+    const both: SourceType = .{ .with_exe = true, .with_test = true };
+    const exe_only: SourceType = .{ .with_exe = true, .with_test = false };
+    const test_only: SourceType = .{ .with_exe = false, .with_test = true };
 };
 
 const BuildModule = struct {
     b: *std.Build,
+    m: ModuleMap,
     tests: *std.Build.Step,
     target: std.Build.ResolvedTarget,
     optimize: std.builtin.OptimizeMode,
     optimize_idx: usize,
+    // extra
+    build_options: *std.Build.Module,
 };
 
 const optimize_names = blk: {
@@ -26,17 +29,159 @@ const optimize_names = blk: {
     break :blk names;
 };
 
+const c_flags = &[_][]const u8{"-std=c99"};
+
+fn resolveSrcName(src: []const u8) []const u8 {
+    const slash_idx = std.mem.lastIndexOf(u8, src, "/");
+    const start = if (slash_idx) |idx| idx + 1 else 0;
+    const dot_idx = std.mem.indexOf(
+        u8,
+        if (start == 0) src else src[start..],
+        ".",
+    ) orelse 0;
+    return if (start != 0 and dot_idx != 0) src[start .. start + dot_idx] else src;
+}
+
+fn concat(b: *std.Build, prefix: []const u8, suffix: []const u8, def: []const u8) []const u8 {
+    const out = b.allocator.alloc(u8, prefix.len + suffix.len) catch return def;
+    @memcpy(out[0..prefix.len], prefix);
+    @memcpy(out[prefix.len..], suffix);
+    return out;
+}
+
+fn addModuleTo(
+    bm: *BuildModule,
+    comptime source_type: SourceType,
+    comptime root_src: []const u8,
+    comptime run_name: []const u8,
+) *std.Build.Module {
+    const is_zig = std.mem.endsWith(u8, root_src, ".zig");
+
+    if (!source_type.with_test and !source_type.with_exe) @panic("Must atleast be exe or test.");
+    if (!is_zig and source_type.with_test) @panic("Tests can only be in .zig files");
+
+    const name = comptime resolveSrcName(root_src);
+
+    var b = bm.b;
+    const mod = b.createModule(.{
+        .root_source_file = .{
+            .src_path = .{
+                .owner = b,
+                .sub_path = root_src,
+            },
+        },
+        .target = bm.target,
+        .optimize = bm.optimize,
+    });
+    bm.m.put(name, mod) catch unreachable;
+
+    if (is_zig) {
+        mod.addImport("build_options", bm.build_options);
+    }
+    if (source_type.with_exe) {
+        const exe_name = if (bm.optimize == .ReleaseFast) name else concat(b, name ++ "--", optimize_names[bm.optimize_idx], name);
+        const exe = b.addExecutable(.{
+            .name = exe_name,
+            .root_module = mod,
+        });
+
+        if (!is_zig) {
+            exe.addCSourceFile(.{
+                .file = .{ .src_path = .{
+                    .owner = b,
+                    .sub_path = root_src,
+                } },
+                .flags = c_flags,
+            });
+        }
+        const run_cmd = b.addRunArtifact(exe);
+        run_cmd.step.dependOn(b.getInstallStep());
+        if (b.args) |args| run_cmd.addArgs(args);
+
+        b.step(
+            if (run_name.len != 0) run_name else "run:" ++ name,
+            "Run executable from " ++ root_src,
+        ).dependOn(&run_cmd.step);
+
+        b.installArtifact(exe);
+        addAllTo(exe);
+    }
+    if (is_zig and source_type.with_test) {
+        const prefix = name ++ "--test--";
+        const test_name = concat(b, prefix, optimize_names[bm.optimize_idx], prefix);
+        const t = b.addTest(.{
+            .name = test_name,
+            .root_module = mod,
+        });
+
+        b.step(
+            "test:" ++ name,
+            "Run tests from " ++ root_src,
+        ).dependOn(&b.addRunArtifact(t).step);
+
+        b.installArtifact(t);
+        addAllTo(t);
+        bm.tests.dependOn(&b.addRunArtifact(t).step);
+    }
+    return mod;
+}
+
+fn addAllTo(
+    exe: *std.Build.Step.Compile,
+) void {
+    //exe.setTarget(target);
+    //exe.setBuildMode(mode);
+    exe.linkLibC();
+}
+
+pub fn parseGitRevHead(a: std.mem.Allocator) ![]const u8 {
+    var child = std.process.Child.init(
+        &.{ "git", "rev-parse", "HEAD" },
+        a,
+    );
+    child.stdout_behavior = .Pipe;
+    child.stderr_behavior = .Pipe;
+    try child.spawn();
+    var child_stdout = try std.ArrayListUnmanaged(u8).initCapacity(
+        a,
+        50,
+    );
+    var child_stderr = std.ArrayListUnmanaged(u8).initBuffer(
+        child_stdout.items,
+    );
+    try child.collectOutput(
+        a,
+        &child_stdout,
+        &child_stderr,
+        std.math.maxInt(usize),
+    );
+    _ = try child.wait();
+    return std.mem.trim(u8, child_stdout.items, "\n");
+}
+
 pub fn build(b: *std.Build) void {
     const target = b.standardTargetOptions(.{});
     const optimize = b.standardOptimizeOption(.{});
-
+    const build_options = b.addOptions();
+    build_options.addOption(
+        []const u8,
+        "version",
+        b.option(
+            []const u8,
+            "version",
+            "the app version",
+        ) orelse parseGitRevHead(b.allocator) catch "master",
+    );
     var bm: BuildModule = .{
         .b = b,
+        .m = ModuleMap.init(b.allocator),
         .tests = b.step("test", "Run all tests"),
         .target = target,
         .optimize = optimize,
         .optimize_idx = @intFromEnum(optimize),
+        .build_options = build_options.createModule(),
     };
+    defer bm.m.deinit();
 
     const zpp = b.addModule("zpp", .{
         .root_source_file = b.path("src/lib.zig"),
@@ -76,124 +221,35 @@ pub fn build(b: *std.Build) void {
         .optimize = optimize,
     }).createModule());
 
-    {
-        // Setup Tests
-        // const test_header = b.path("test/zpp-test.h");
-        const lib_test = b.addTest(.{
-            // .root_module = zpp,
-            .root_source_file = b.path("test/test.zig"),
-            .filters = b.option(
-                []const []const u8,
-                "test-filter",
-                "test-filter",
-            ) orelse &.{},
-            // .test_runner = .{ .path = b.path("test_runner.zig"), .mode = .simple },
-        });
-        lib_test.root_module.addImport("zpp", zpp);
-        lib_test.addIncludePath(b.path("test"));
-        lib_test.addIncludePath(b.path("include"));
-
-        // lib_test.addImport("zpp_testlib", b.addTranslateC(.{
-        //     .root_source_file = test_header,
-        //     .target = target,
-        //     .optimize = optimize,
-        // }).createModule());
-
-        bm.tests.dependOn(&b.addRunArtifact(lib_test).step);
-    }
-    {
-        const hello = addModuleTo(&bm, .exeOnly, "examples/hello.zig", "");
-        hello.addImport("zpp", zpp);
-    }
-}
-
-fn addModuleTo(
-    bm: *BuildModule,
-    comptime sourceType: SourceType,
-    comptime root_src: []const u8,
-    comptime run_name: []const u8,
-) *std.Build.Module {
-    const is_zig = std.mem.endsWith(u8, root_src, ".zig");
-
-    if (!sourceType.withTest and !sourceType.withExe) @panic("Must atleast be exe or test.");
-    if (!is_zig and sourceType.withTest) @panic("Tests can only be in .zig files");
-
-    const name = comptime resolveSrcName(root_src);
-
-    const b = bm.b;
-
-    const mod = b.createModule(.{
-        .root_source_file = .{
-            .src_path = .{
-                .owner = b,
-                .sub_path = root_src,
-            },
-        },
-        .target = bm.target,
-        .optimize = bm.optimize,
+    // Setup Tests
+    // const test_header = b.path("test/zpp-test.h");
+    const lib_test = b.addTest(.{
+        // .root_module = zpp,
+        .root_source_file = b.path("test/test.zig"),
+        .filters = b.option(
+            []const []const u8,
+            "test-filter",
+            "test-filter",
+        ) orelse &.{},
+        // .test_runner = .{ .path = b.path("test_runner.zig"), .mode = .simple },
     });
-    // mod.addOptions("build_options", bm.build_options);
+    lib_test.root_module.addImport("zpp", zpp);
+    lib_test.addIncludePath(b.path("test"));
+    lib_test.addIncludePath(b.path("include"));
 
-    if (sourceType.withExe) {
-        const exe_name = if (bm.optimize == .ReleaseFast) name else concat(b, name ++ "--", optimize_names[bm.optimize_idx], name);
-        const exe = b.addExecutable(.{
-            .name = exe_name,
-            .root_module = mod,
-        });
+    // lib_test.addImport("zpp_testlib", b.addTranslateC(.{
+    //     .root_source_file = test_header,
+    //     .target = target,
+    //     .optimize = optimize,
+    // }).createModule());
 
-        if (!is_zig) {
-            exe.addCSourceFile(.{
-                .file = .{ .src_path = .{
-                    .owner = b,
-                    .sub_path = root_src,
-                } },
-                .flags = c_flags,
-            });
-        }
-        const run_cmd = b.addRunArtifact(exe);
-        run_cmd.step.dependOn(b.getInstallStep());
-        if (b.args) |args| run_cmd.addArgs(args);
+    bm.tests.dependOn(&b.addRunArtifact(lib_test).step);
 
-        b.step(
-            if (run_name.len != 0) run_name else "run:" ++ name,
-            "Run executable from " ++ root_src,
-        ).dependOn(&run_cmd.step);
-
-        b.installArtifact(exe);
-    }
-    if (is_zig and sourceType.withTest) {
-        const prefix = name ++ "--test--";
-        const test_name = concat(b, prefix, optimize_names[bm.optimize_idx], prefix);
-        const t = b.addTest(.{
-            .name = test_name,
-            .root_module = mod,
-        });
-
-        b.step(
-            "test:" ++ name,
-            "Run tests from " ++ root_src,
-        ).dependOn(&b.addRunArtifact(t).step);
-
-        b.installArtifact(t);
-        bm.tests.dependOn(&b.addRunArtifact(t).step);
-    }
-    return mod;
-}
-
-fn resolveSrcName(src: []const u8) []const u8 {
-    const slashIdx = std.mem.lastIndexOf(u8, src, "/");
-    const start = if (slashIdx) |idx| idx + 1 else 0;
-    const dotIdx = std.mem.indexOf(
-        u8,
-        if (start == 0) src else src[start..],
-        ".",
-    ) orelse 0;
-    return if (start != 0 and dotIdx != 0) src[start .. start + dotIdx] else src;
-}
-
-fn concat(b: *std.Build, prefix: []const u8, suffix: []const u8, def: []const u8) []const u8 {
-    const out = b.allocator.alloc(u8, prefix.len + suffix.len) catch return def;
-    @memcpy(out[0..prefix.len], prefix);
-    @memcpy(out[prefix.len..], suffix);
-    return out;
+    const hello = addModuleTo(
+        &bm,
+        .exe_only,
+        "examples/hello.zig",
+        "run",
+    );
+    hello.addImport("zpp", zpp);
 }

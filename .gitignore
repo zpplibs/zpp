@@ -1,4 +1,4 @@
-/.zigmod
+/.zig*
 /zig-*
 /target
 /dist
