@@ -1,7 +1,5 @@
 const std = @import("std");
 
-const ModuleMap = std.StringHashMap(*std.Build.Module);
-
 const SourceType = struct {
     with_exe: bool,
     with_test: bool,
@@ -12,13 +10,13 @@ const SourceType = struct {
 
 const BuildModule = struct {
     b: *std.Build,
-    m: ModuleMap,
     tests: *std.Build.Step,
     target: std.Build.ResolvedTarget,
     optimize: std.builtin.OptimizeMode,
     optimize_idx: usize,
     // extra
     build_options: *std.Build.Module,
+    test_filters: []const []const u8,
 };
 
 const optimize_names = blk: {
@@ -62,7 +60,7 @@ fn concat(b: *std.Build, prefix: []const u8, suffix: []const u8, def: []const u8
 }
 
 fn addModuleTo(
-    bm: *BuildModule,
+    bm: *const BuildModule,
     comptime source_type: SourceType,
     comptime root_src: []const u8,
     comptime run_name: []const u8,
@@ -76,7 +74,7 @@ fn addModuleTo(
 
     var b = bm.b;
     const mod = b.createModule(.{
-        .root_source_file = .{
+        .root_source_file = if (!is_zig) null else .{
             .src_path = .{
                 .owner = b,
                 .sub_path = root_src,
@@ -85,7 +83,6 @@ fn addModuleTo(
         .target = bm.target,
         .optimize = bm.optimize,
     });
-    bm.m.put(name, mod) catch unreachable;
 
     if (is_zig) {
         mod.addImport("build_options", bm.build_options);
@@ -129,6 +126,7 @@ fn addModuleTo(
         const t = b.addTest(.{
             .name = test_name,
             .root_module = mod,
+            .filters = bm.test_filters,
         });
 
         b.step(
@@ -180,71 +178,82 @@ pub fn build(b: *std.Build) void {
             "the app version",
         ) orelse parseGitRevHead(b.allocator) catch "master",
     );
-    var bm: BuildModule = .{
+    const bm: BuildModule = .{
         .b = b,
-        .m = ModuleMap.init(b.allocator),
         .tests = b.step("test", "Run all tests"),
         .target = target,
         .optimize = optimize,
         .optimize_idx = @intFromEnum(optimize),
         .build_options = build_options.createModule(),
+        .test_filters = b.option(
+            []const []const u8,
+            "test-filter",
+            "Limit the amount of tests to run",
+        ) orelse &.{},
     };
-    defer bm.m.deinit();
 
-    const zpp = b.addModule("zpp", .{
+    // ======================================================================
+    // deps
+
+    // no zig.zon deps
+
+    // ======================================================================
+    // cpp lib
+
+    const lib = b.addStaticLibrary(.{
+        .name = "zpp",
+        .target = target,
+        .optimize = optimize,
+    });
+
+    const lib_header = b.path("include/zpp.h");
+
+    lib.addIncludePath(b.path("include"));
+    lib.linkLibCpp();
+    lib.addCSourceFiles(.{
+        .root = b.path("src"),
+        .files = &.{
+            "lib.cpp",
+        },
+        .flags = cpp_flags,
+    });
+
+    lib.installHeader(lib_header, "zpp.h");
+    b.default_step.dependOn(&b.addInstallHeaderFile(
+        lib_header,
+        "zpp.h",
+    ).step);
+    b.installArtifact(lib);
+
+    // ======================================================================
+    // module
+
+    const mod = b.addModule("zpp", .{
         .root_source_file = b.path("src/lib.zig"),
         .target = target,
         .optimize = optimize,
     });
 
-    const cpp_header = b.path("include/zpp.h");
-
-    const cpp_lib = b.addStaticLibrary(.{
-        .name = "zpp",
-        .target = target,
-        .optimize = optimize,
-    });
-    cpp_lib.addIncludePath(b.path("include"));
-    cpp_lib.linkLibCpp();
-    cpp_lib.installHeader(cpp_header, "zpp.h");
-
-    cpp_lib.addCSourceFiles(.{
-        .root = b.path("src"),
-        .files = &.{
-            "lib.cpp",
-        },
-        .flags = c_flags,
-    });
-    b.installArtifact(cpp_lib);
-
-    b.default_step.dependOn(&b.addInstallHeaderFile(
-        cpp_header,
-        "zpp.h",
-    ).step);
-
-    zpp.linkLibrary(cpp_lib);
-
-    zpp.addImport("zpp_clib", b.addTranslateC(.{
-        .root_source_file = cpp_header,
+    mod.linkLibrary(lib);
+    mod.addImport("zpp_clib", b.addTranslateC(.{
+        .root_source_file = lib_header,
         .target = target,
         .optimize = optimize,
     }).createModule());
 
-    // Setup Tests
+    // ======================================================================
+    // tests
+
     // const test_header = b.path("test/zpp-test.h");
     const lib_test = b.addTest(.{
         // .root_module = zpp,
         .root_source_file = b.path("tests/test.zig"),
-        .filters = b.option(
-            []const []const u8,
-            "test-filter",
-            "test-filter",
-        ) orelse &.{},
+        .filters = bm.test_filters,
         // .test_runner = .{ .path = b.path("test_runner.zig"), .mode = .simple },
     });
-    lib_test.root_module.addImport("zpp", zpp);
+    lib_test.root_module.addImport("zpp", mod);
+    lib_test.linkLibrary(lib);
     lib_test.addIncludePath(b.path("tests"));
-    lib_test.addIncludePath(b.path("include"));
 
     // lib_test.addImport("zpp_testlib", b.addTranslateC(.{
     //     .root_source_file = test_header,
@@ -254,11 +263,14 @@ pub fn build(b: *std.Build) void {
 
     bm.tests.dependOn(&b.addRunArtifact(lib_test).step);
 
+    // ======================================================================
+    // executables
+
     const hello = addModuleTo(
         &bm,
         .exe_only,
         "examples/hello.zig",
         "run",
     );
-    hello.addImport("zpp", zpp);
+    hello.addImport("zpp", mod);
 }
