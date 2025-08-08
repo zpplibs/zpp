@@ -29,12 +29,19 @@ const optimize_names = blk: {
     break :blk names;
 };
 
-const c_flags = &[_][]const u8{
+const common_flags = &[_][]const u8{
     "-Wall",
     "-Wextra",
     "-Werror",
     "-DNDEBUG",
 };
+
+// const c_flags = &[_][]const u8{"-std=c99"} ++ common_flags;
+const c_flags = common_flags;
+const cpp_flags = &[_][]const u8{
+    "-fno-exceptions",
+    "-fno-rtti",
+} ++ common_flags;
 
 fn resolveSrcName(src: []const u8) []const u8 {
     const slash_idx = std.mem.lastIndexOf(u8, src, "/");
@@ -91,14 +98,15 @@ fn addModuleTo(
         });
 
         if (!is_zig) {
+            const is_c = std.mem.endsWith(u8, root_src, ".c");
             exe.addCSourceFile(.{
                 .file = .{ .src_path = .{
                     .owner = b,
                     .sub_path = root_src,
                 } },
-                .flags = c_flags,
+                .flags = if (is_c) c_flags else cpp_flags,
             });
-            if (std.mem.endsWith(u8, root_src, ".c")) {
+            if (is_c) {
                 exe.linkLibC();
             } else {
                 exe.linkLibCpp();
