@@ -219,10 +219,10 @@ pub fn build(b: *std.Build) void {
     });
 
     lib.installHeader(lib_header, "zpp.h");
-    b.default_step.dependOn(&b.addInstallHeaderFile(
-        lib_header,
-        "zpp.h",
-    ).step);
+    // b.default_step.dependOn(&b.addInstallHeaderFile(
+    //     lib_header,
+    //     "zpp.h",
+    // ).step);
     b.installArtifact(lib);
 
     // ======================================================================
