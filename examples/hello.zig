@@ -39,11 +39,15 @@ pub fn main() !void {
 
 fn run(args: [][:0]u8) !void {
     printInfo();
-    var def = zpp.initStdString(0);
+    var def = zpp.initStdString(.{
+        .min_capacity = 0,
+    });
     defer def.deinit();
 
     const min_capacity: usize = 512;
-    var buf = zpp.initFlexStdString(min_capacity);
+    var buf = zpp.initFlexStdString(.{
+        .min_capacity = min_capacity,
+    });
     defer buf.deinit();
 
     for (args) |arg| {

@@ -22,18 +22,18 @@ fn verifyStdString(buf: anytype) !void {
     const actual_capacity = buf.capacity();
     try std.testing.expect(actual_capacity > 1);
     try std.testing.expect(0 == buf.size());
-    
+
     try buf.appendSlice("foo");
     try std.testing.expect(3 == buf.size());
     try buf.appendSliceOpts("bar", .{});
     try std.testing.expect(6 == buf.size());
     try std.testing.expectEqualSlices(u8, "foobar", buf.items());
-    
+
     try buf.appendSliceOpts("baz!", .{ .clear_before_append = true });
     try std.testing.expect(4 == buf.size());
     buf.clearRetainingCapacity();
     try std.testing.expect(0 == buf.size());
-    
+
     // resize
     try buf.resize(3);
     var items = buf.items();
@@ -44,7 +44,7 @@ fn verifyStdString(buf: anytype) !void {
     try std.testing.expect(0 == items[0]);
     try std.testing.expect(0 == items[1]);
     try std.testing.expect(0 == items[2]);
-    
+
     try buf.resizeAndFill(4, 'a');
     items = buf.items();
     try std.testing.expect(4 == buf.size());
@@ -55,7 +55,7 @@ fn verifyStdString(buf: anytype) !void {
     try std.testing.expect(0 == items[1]);
     try std.testing.expect(0 == items[2]);
     try std.testing.expect('a' == items[3]);
-    
+
     try buf.resizeAndFill(5, 'z');
     items = buf.items();
     try std.testing.expect(5 == buf.size());
@@ -65,7 +65,7 @@ fn verifyStdString(buf: anytype) !void {
     try std.testing.expect(0 == items[2]);
     try std.testing.expect('a' == items[3]);
     try std.testing.expect('z' == items[4]);
-    
+
     try buf.resize(7);
     items = buf.items();
     try std.testing.expect(7 == buf.size());
@@ -77,7 +77,7 @@ fn verifyStdString(buf: anytype) !void {
     try std.testing.expect('z' == items[4]);
     try std.testing.expect(0 == items[5]);
     try std.testing.expect(0 == items[6]);
-    
+
     try buf.resizeAndFill(4, 'g');
     items = buf.items();
     try std.testing.expect(4 == buf.size());
@@ -91,27 +91,31 @@ fn verifyStdString(buf: anytype) !void {
 test "ArrayList.appendSlice from c" {
     var buf = std.ArrayList(u8).init(std.testing.allocator);
     defer buf.deinit();
-    
-    // explicity call so it would be included by the compiler 
+
+    // explicity call so it would be included by the compiler
     try std.testing.expect(zpp.initialized);
-    
+
     try u8VerifyAppend(&buf, "foo", "foo");
     try u8VerifyAppend(&buf, "bar", "foobar");
-    
+
     std.debug.print("ok\n", .{});
 }
 
 test "StdString api" {
-    var def = zpp.initStdString(0);
+    var def = zpp.initStdString(.{
+        .min_capacity = 0,
+    });
     defer def.deinit();
-    
+
     const min_capacity: usize = 512;
-    var buf = zpp.initStdString(min_capacity);
+    var buf = zpp.initStdString(.{
+        .min_capacity = min_capacity,
+    });
     defer buf.deinit();
-    
+
     const actual_capacity = buf.capacity();
     try verifyStdString(&buf);
-    
+
     std.debug.print(
         "ok\n  - capacity default: {}, min: {}, actual: {}\n",
         .{ def.capacity(), min_capacity, actual_capacity },
@@ -120,12 +124,14 @@ test "StdString api" {
 
 test "FlexStdString api" {
     const capacity: usize = 512;
-    var buf = zpp.initFlexStdString(capacity);
+    var buf = zpp.initFlexStdString(.{
+        .min_capacity = 512,
+    });
     defer buf.deinit();
-    
+
     const actual_capacity = buf.capacity();
     try verifyStdString(&buf);
-    
+
     std.debug.print(
         "ok\n  - capacity min: {}, actual: {}\n",
         .{ capacity, actual_capacity },
@@ -134,40 +140,45 @@ test "FlexStdString api" {
 
 test "FixedStdString api" {
     const capacity: usize = 512;
-    var buf = zpp.initFixedStdString(capacity, false);
+    var buf = zpp.initFixedStdString(.{
+        .capacity = capacity,
+        .use_actual = false,
+    });
     defer buf.deinit();
-    
+
     try std.testing.expect(capacity == buf.capacity());
     try verifyStdString(&buf);
-    
+
     std.debug.print(
         "ok\n  - capacity: {}\n",
-        .{ capacity },
+        .{capacity},
     );
 }
 
 test "StdString small capacity" {
     const min_capacity: usize = 64;
-    var buf = zpp.initStdString(min_capacity);
+    var buf = zpp.initStdString(.{
+        .min_capacity = min_capacity,
+    });
     defer buf.deinit();
-    
+
     const actual_capacity = buf.capacity();
-    
+
     var list = std.ArrayList(u8).init(std.testing.allocator);
     defer list.deinit();
-    
+
     const to_append = "1234567890";
     var i: usize = 0;
     while (i < 100) : (i += 1) {
         try buf.appendSlice(to_append);
         try list.appendSlice(to_append);
-        
+
         const b_items = buf.items();
         const l_items = list.items;
-        
+
         try std.testing.expectEqualSlices(u8, l_items, b_items);
     }
-    
+
     std.debug.print(
         "ok\n  - capacity min: {}, actual: {}, current: {}\n",
         .{ min_capacity, actual_capacity, buf.capacity() },
@@ -176,27 +187,29 @@ test "StdString small capacity" {
 
 test "FlexStdString small capacity" {
     const min_capacity: usize = 64;
-    var buf = zpp.initFlexStdString(min_capacity);
+    var buf = zpp.initFlexStdString(.{
+        .min_capacity = min_capacity,
+    });
     defer buf.deinit();
-    
+
     const actual_capacity = buf.capacity();
-    
+
     var list = std.ArrayList(u8).init(std.testing.allocator);
     defer list.deinit();
-    
+
     const to_append = "1234567890";
     var i: usize = 0;
     while (i < 100) : (i += 1) {
         try buf.appendSlice(to_append);
         try list.appendSlice(to_append);
-        
+
         const b_items = buf.items();
         const l_items = list.items;
-        
+
         //std.debug.print("\niteration: {}\n{s}\n{s}\n", .{ i, b_items, l_items });
         try std.testing.expectEqualSlices(u8, l_items, b_items);
     }
-    
+
     std.debug.print(
         "ok\n  - capacity min: {}, actual: {}, current: {}\n",
         .{ min_capacity, actual_capacity, buf.capacity() },
@@ -205,15 +218,18 @@ test "FlexStdString small capacity" {
 
 test "FixedStdString.appendSlice overflow" {
     const min_capacity: usize = 16;
-    var buf = zpp.initFixedStdString(min_capacity, false);
+    var buf = zpp.initFixedStdString(.{
+        .capacity = min_capacity,
+        .use_actual = false,
+    });
     defer buf.deinit();
-    
+
     const to_append = "1234567890";
     try buf.appendSlice(to_append);
     buf.appendSlice(to_append) catch |e| {
         try std.testing.expect(e == zpp.StdStringError.Append);
         std.debug.print("ok\n", .{});
-        return;       
+        return;
     };
     try std.testing.expect(false);
 }

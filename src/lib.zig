@@ -94,9 +94,16 @@ pub const StdString = struct {
     }
 };
 
-pub fn initStdString(min_capacity: usize) StdString {
+pub fn initStdString(opts: struct {
+    min_capacity: usize,
+}) StdString {
     return .{
-        .ptr = c.zpp_ss_new(min_capacity, false, null, null),
+        .ptr = c.zpp_ss_new(
+            opts.min_capacity,
+            false,
+            null,
+            null,
+        ),
     };
 }
 
@@ -177,14 +184,17 @@ pub const FixedStdString = struct {
     }
 };
 
-pub fn initFixedStdString(capacity: usize, use_actual: bool) FixedStdString {
+pub fn initFixedStdString(opts: struct {
+    capacity: usize,
+    use_actual: bool,
+}) FixedStdString {
     var data: [*c]u8 = undefined;
-    var actual_capacity = capacity;
+    var actual_capacity = opts.capacity;
     const ptr = c.zpp_ss_new(
-        capacity,
+        opts.capacity,
         false,
         &data,
-        if (use_actual) &actual_capacity else null,
+        if (opts.use_actual) &actual_capacity else null,
     );
     return .{
         .ptr = ptr,
@@ -202,9 +212,10 @@ pub const FlexStdString = struct {
     ptr: isize,
     len: usize,
     buf: []u8,
+    owned: bool,
 
     pub fn deinit(self: *FlexStdString) void {
-        _ = c.zpp_ss_free(&self.ptr);
+        if (self.owned) _ = c.zpp_ss_free(&self.ptr);
     }
 
     pub fn clearRetainingCapacity(self: *FlexStdString) void {
@@ -321,19 +332,34 @@ pub const FlexStdString = struct {
     }
 };
 
-pub fn initFlexStdString(min_capacity: usize) FlexStdString {
+pub fn initFlexStdString(opts: struct {
+    min_capacity: usize,
+    std_string_ptr: isize = 0,
+}) FlexStdString {
     var data: [*c]u8 = undefined;
     var capacity: usize = undefined;
-    const ptr = c.zpp_ss_new(
-        min_capacity,
-        true,
-        &data,
-        &capacity,
-    );
+    var ptr: isize = undefined;
+    if (opts.std_string_ptr == 0) {
+        ptr = c.zpp_ss_new(
+            opts.min_capacity,
+            true,
+            &data,
+            &capacity,
+        );
+    } else {
+        ptr = opts.std_string_ptr;
+        data = c.zpp_ss_init(
+            ptr,
+            opts.min_capacity,
+            true,
+            &capacity,
+        );
+    }
     return .{
         .ptr = ptr,
         .len = 0,
         .buf = data[0..capacity],
+        .owned = opts.std_string_ptr != 0,
     };
 }
 

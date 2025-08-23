@@ -23,6 +23,24 @@ zpp_ss_new(
     return (intptr_t)buf;
 }
 
+char*
+zpp_ss_init(
+    const intptr_t ptr,
+    const size_t min_capacity,
+    const bool resize_to_last_idx,
+    size_t* capacity_out
+) {
+    if (ptr == 0) return nullptr;
+    auto buf = (std::string*)ptr;
+    if (min_capacity > 0) {
+        buf->reserve(min_capacity);
+        if (resize_to_last_idx) buf->resize(buf->capacity() - 1);
+    }
+    if (capacity_out != nullptr) *capacity_out = buf->capacity();
+    
+    return const_cast<char*>(buf->data());
+}
+
 // avoids double-free
 bool
 zpp_ss_free(intptr_t* ptr) {

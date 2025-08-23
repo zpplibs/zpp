@@ -31,6 +31,14 @@ zpp_ss_new(
     size_t* capacity_out
 );
 
+char*
+zpp_ss_init(
+    const intptr_t ptr,
+    const size_t min_capacity,
+    const bool resize_to_last_idx,
+    size_t* capacity_out
+);
+
 bool
 zpp_ss_free(intptr_t* ptr);
 
