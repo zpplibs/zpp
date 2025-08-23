@@ -122,6 +122,19 @@ test "StdString api" {
     );
 }
 
+test "StdString.append" {
+    const min_capacity: usize = 64;
+    var buf = zpp.initStdString(.{
+        .min_capacity = min_capacity,
+    });
+    defer buf.deinit();
+
+    try buf.append('a');
+    try buf.append('b');
+    try buf.append('c');
+    try std.testing.expectEqualSlices(u8, "abc", buf.items());
+}
+
 test "FlexStdString api" {
     const capacity: usize = 512;
     var buf = zpp.initFlexStdString(.{
@@ -232,4 +245,74 @@ test "FixedStdString.appendSlice overflow" {
         return;
     };
     try std.testing.expect(false);
+}
+
+test "FixedStdString.append" {
+    const min_capacity: usize = 16;
+    var buf = zpp.initFixedStdString(.{
+        .capacity = min_capacity,
+        .use_actual = true,
+    });
+    defer buf.deinit();
+
+    const to_append = "1234567890";
+    try buf.appendSlice(to_append);
+    try buf.append('a');
+    try buf.append('b');
+    try buf.append('c');
+
+    try std.testing.expectEqual(to_append.len + 3, buf.len);
+    try std.testing.expectEqual('c', buf.items()[buf.len - 1]);
+    try std.testing.expectEqualSlices(u8, "abc", buf.items()[buf.len - 3 ..]);
+}
+
+test "FixedStdString.append overflow" {
+    const min_capacity: usize = 16;
+    var buf = zpp.initFixedStdString(.{
+        .capacity = min_capacity,
+        .use_actual = true,
+    });
+    defer buf.deinit();
+
+    for (0..buf.capacity()) |_| try buf.append('a');
+
+    buf.append('a') catch |e| {
+        try std.testing.expect(e == zpp.StdStringError.Append);
+        return;
+    };
+    try std.testing.expect(false);
+}
+
+test "FlexStdString.append" {
+    const min_capacity: usize = 16;
+    var buf = zpp.initFlexStdString(.{
+        .min_capacity = min_capacity,
+    });
+    defer buf.deinit();
+
+    const to_append = "1234567890";
+    try buf.appendSlice(to_append);
+    try buf.append('a');
+    try buf.append('b');
+    try buf.append('c');
+
+    try std.testing.expectEqual(to_append.len + 3, buf.len);
+    try std.testing.expectEqual('c', buf.items()[buf.len - 1]);
+    try std.testing.expectEqualSlices(u8, "abc", buf.items()[buf.len - 3 ..]);
+}
+
+test "FlexStdString.append overflow" {
+    const min_capacity: usize = 16;
+    var buf = zpp.initFlexStdString(.{
+        .min_capacity = min_capacity,
+    });
+    defer buf.deinit();
+
+    for (0..buf.capacity()) |_| try buf.append('a');
+
+    try buf.append('b');
+    try buf.append('c');
+
+    try std.testing.expectEqual('c', buf.items()[buf.len - 1]);
+    try std.testing.expectEqualSlices(u8, "abc", buf.items()[buf.len - 3 ..]);
 }
