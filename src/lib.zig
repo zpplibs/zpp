@@ -70,6 +70,11 @@ pub const StdString = struct {
         return if (data == null) empty_slice else data[0..len];
     }
 
+    pub fn append(self: *StdString, item: u8) !void {
+        const items_: [1]u8 = .{item};
+        return appendSlice(self, &items_);
+    }
+
     /// Append the slice of items. Allocates more memory as necessary.
     pub fn appendSlice(self: *StdString, items_: []const u8) !void {
         if (!c.zpp_ss_append(
@@ -157,6 +162,13 @@ pub const FixedStdString = struct {
         return self.buf[0..self.len];
     }
 
+    pub fn append(self: *FixedStdString, item: u8) !void {
+        const new_len = self.len + 1;
+        if (new_len > self.buf.len) return StdStringError.Append;
+        self.buf[self.len] = item;
+        self.len = new_len;
+    }
+
     pub fn appendSlice(self: *FixedStdString, items_: []const u8) !void {
         if (items_.len == 0) return;
         const new_len = self.len + items_.len;
@@ -186,7 +198,7 @@ pub const FixedStdString = struct {
 
 pub fn initFixedStdString(opts: struct {
     capacity: usize,
-    use_actual: bool,
+    use_actual: bool = true,
 }) FixedStdString {
     var data: [*c]u8 = undefined;
     var actual_capacity = opts.capacity;
@@ -263,6 +275,33 @@ pub const FlexStdString = struct {
 
     pub fn items(self: *FlexStdString) []u8 {
         return self.buf[0..self.len];
+    }
+
+    pub fn append(self: *FlexStdString, item: u8) !void {
+        const new_len = self.len + 1;
+        if (new_len > self.buf.len) {
+            // var new_data: [*c]u8 = undefined;
+            // const new_capacity = c.zpp_ss_inc_capacity(
+            //     self.ptr,
+            //     new_len,
+            //     &new_data,
+            // );
+            // if (new_capacity == 0) return StdStringError.Append;
+            // self.buf = new_data[0..new_capacity];
+            var new_data: [*c]u8 = undefined;
+            var new_capacity: usize = undefined;
+            if (!c.zpp_ss_resize(
+                self.ptr,
+                new_len,
+                0,
+                true,
+                &new_data,
+                &new_capacity,
+            )) return StdStringError.Append;
+            self.buf = new_data[0..new_capacity];
+        }
+        self.buf[self.len] = item;
+        self.len = new_len;
     }
 
     pub fn appendSlice(self: *FlexStdString, items_: []const u8) !void {
