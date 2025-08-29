@@ -128,14 +128,15 @@ fn addModuleTo(
             .root_module = mod,
             .filters = bm.test_filters,
         });
+        const test_cmd = b.addRunArtifact(t);
 
         b.step(
             "test:" ++ name,
             "Run tests from " ++ root_src,
-        ).dependOn(&b.addRunArtifact(t).step);
+        ).dependOn(&test_cmd.step);
+        bm.tests.dependOn(&test_cmd.step);
 
         b.installArtifact(t);
-        bm.tests.dependOn(&b.addRunArtifact(t).step);
     }
     return mod;
 }
