@@ -62,6 +62,13 @@ zpp_ss_inc_capacity(const intptr_t ptr,
 */
 
 bool
+zpp_ss_set_size(const intptr_t ptr,
+    const size_t size,
+    char** data_out,
+    size_t* capacity_out
+);
+
+bool
 zpp_ss_resize(const intptr_t ptr,
     const size_t size,
     const uint8_t filler,

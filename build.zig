@@ -37,6 +37,7 @@ const common_flags = &[_][]const u8{
 // const c_flags = &[_][]const u8{"-std=c99"} ++ common_flags;
 const c_flags = common_flags;
 const cpp_flags = &[_][]const u8{
+    "-std=gnu++23",
     "-fno-exceptions",
     "-fno-rtti",
 } ++ common_flags;

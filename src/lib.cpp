@@ -14,9 +14,11 @@ zpp_ss_new(
     size_t* capacity_out
 ) {
     auto buf = new std::string;
-    if (min_capacity > 0) {
+    if (min_capacity > buf->capacity()) {
         buf->reserve(min_capacity);
-        if (resize_to_last_idx) buf->resize(buf->capacity() - 1);
+    }
+    if (resize_to_last_idx) {
+        buf->resize_and_overwrite(buf->capacity() - 1, [](char* _, size_t n) noexcept { return n; });
     }
     if (data_out != nullptr) *data_out = const_cast<char*>(buf->data());
     if (capacity_out != nullptr) *capacity_out = buf->capacity();
@@ -32,9 +34,11 @@ zpp_ss_init(
 ) {
     if (ptr == 0) return nullptr;
     auto buf = (std::string*)ptr;
-    if (min_capacity > 0) {
+    if (min_capacity > buf->capacity()) {
         buf->reserve(min_capacity);
-        if (resize_to_last_idx) buf->resize(buf->capacity() - 1);
+    }
+    if (resize_to_last_idx) {
+        buf->resize_and_overwrite(buf->capacity() - 1, [](char* _, size_t n) noexcept { return n; });
     }
     if (capacity_out != nullptr) *capacity_out = buf->capacity();
     
@@ -82,6 +86,22 @@ zpp_ss_inc_capacity(const intptr_t ptr,
     return capacity;
 }
 */
+
+bool
+zpp_ss_set_size(const intptr_t ptr,
+    const size_t size,
+    char** data_out,
+    size_t* capacity_out
+) {
+    if (ptr == 0) return false;
+    
+    auto buf = (std::string*)ptr;
+    buf->resize_and_overwrite(size, [](char* _, size_t n) noexcept { return n; });
+    
+    if (data_out != nullptr) *data_out = const_cast<char*>(buf->data());
+    if (capacity_out != nullptr) *capacity_out = buf->capacity();
+    return true;
+}
 
 bool
 zpp_ss_resize(const intptr_t ptr,
