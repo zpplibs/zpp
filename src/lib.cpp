@@ -9,7 +9,7 @@ extern "C" {
 intptr_t
 zpp_ss_new(
     const size_t min_capacity,
-    const bool resize_to_last_idx,
+    const bool resize_to_capacity,
     char** data_out,
     size_t* capacity_out
 ) {
@@ -17,8 +17,8 @@ zpp_ss_new(
     if (min_capacity > buf->capacity()) {
         buf->reserve(min_capacity);
     }
-    if (resize_to_last_idx) {
-        buf->resize_and_overwrite(buf->capacity() - 1, [](char* _, size_t n) noexcept { return n; });
+    if (resize_to_capacity) {
+        buf->resize_and_overwrite(buf->capacity(), [](char* _, size_t n) noexcept { return n; });
     }
     if (data_out != nullptr) *data_out = const_cast<char*>(buf->data());
     if (capacity_out != nullptr) *capacity_out = buf->capacity();
@@ -29,7 +29,7 @@ char*
 zpp_ss_init(
     const intptr_t ptr,
     const size_t min_capacity,
-    const bool resize_to_last_idx,
+    const bool resize_to_capacity,
     size_t* capacity_out
 ) {
     if (ptr == 0) return nullptr;
@@ -37,8 +37,8 @@ zpp_ss_init(
     if (min_capacity > buf->capacity()) {
         buf->reserve(min_capacity);
     }
-    if (resize_to_last_idx) {
-        buf->resize_and_overwrite(buf->capacity() - 1, [](char* _, size_t n) noexcept { return n; });
+    if (resize_to_capacity) {
+        buf->resize_and_overwrite(buf->capacity(), [](char* _, size_t n) noexcept { return n; });
     }
     if (capacity_out != nullptr) *capacity_out = buf->capacity();
     

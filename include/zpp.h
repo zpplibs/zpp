@@ -26,7 +26,7 @@ zpp_array_list_u8_append_slice(
 intptr_t
 zpp_ss_new(
     const size_t min_capacity,
-    const bool resize_to_last_idx,
+    const bool resize_to_capacity,
     char** data_out,
     size_t* capacity_out
 );
@@ -35,7 +35,7 @@ char*
 zpp_ss_init(
     const intptr_t ptr,
     const size_t min_capacity,
-    const bool resize_to_last_idx,
+    const bool resize_to_capacity,
     size_t* capacity_out
 );
 
