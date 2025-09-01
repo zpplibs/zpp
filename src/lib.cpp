@@ -113,10 +113,15 @@ zpp_ss_resize(const intptr_t ptr,
 ) {
     if (ptr == 0) return false;
     auto buf = (std::string*)ptr;
+    /*
     if (preserve_trailing_data) {
         auto current_size = buf->size();
         auto copy_len = buf->capacity() - current_size;
         if (copy_len > 0) buf->append(buf->data() + current_size, copy_len);
+    }
+    */
+    if (preserve_trailing_data && buf->capacity() > buf->size()) {
+        buf->resize_and_overwrite(buf->capacity(), [](char* _, size_t n) noexcept { return n; });
     }
     buf->resize(size, filler);
     //if (filler == 0) buf->resize(size);
