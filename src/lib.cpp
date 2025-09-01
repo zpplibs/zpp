@@ -119,13 +119,18 @@ zpp_ss_resize(const intptr_t ptr,
         auto copy_len = buf->capacity() - current_size;
         if (copy_len > 0) buf->append(buf->data() + current_size, copy_len);
     }
-    */
-    if (preserve_trailing_data && buf->capacity() > buf->size()) {
-        buf->resize_and_overwrite(buf->capacity(), [](char* _, size_t n) noexcept { return n; });
-    }
     buf->resize(size, filler);
-    //if (filler == 0) buf->resize(size);
-    //else buf->resize(size, filler);
+    */
+    auto grow = size > buf->capacity();
+    if (!grow || !preserve_trailing_data) {
+        buf->resize(size, filler);
+    } else if (buf->capacity() > buf->size()) {
+        buf->resize_and_overwrite(buf->capacity(), [](char* _, size_t n) noexcept { return n; });
+        buf->reserve(size);
+    } else {
+        buf->reserve(size);
+    }
+    
     if (data_out != nullptr) *data_out = const_cast<char*>(buf->data());
     if (capacity_out != nullptr) *capacity_out = buf->capacity();
     return true;
