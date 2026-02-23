@@ -202,23 +202,29 @@ pub fn build(b: *std.Build) void {
     // ======================================================================
     // cpp lib
 
-    const lib = b.addStaticLibrary(.{
-        .name = "zpp",
+    const lib_mod = b.createModule(.{
         .target = target,
         .optimize = optimize,
+        .link_libcpp = true,
     });
 
-    const lib_header = b.path("include/zpp.h");
+    lib_mod.addIncludePath(b.path("include"));
 
-    lib.addIncludePath(b.path("include"));
-    lib.linkLibCpp();
-    lib.addCSourceFiles(.{
+    lib_mod.addCSourceFiles(.{
         .root = b.path("src"),
         .files = &.{
             "lib.cpp",
         },
         .flags = cpp_flags,
     });
+
+    const lib = b.addLibrary(.{
+        .name = "zpp",
+        .root_module = lib_mod,
+        .linkage = .static,
+    });
+
+    const lib_header = b.path("include/zpp.h");
 
     lib.installHeader(lib_header, "zpp.h");
     // b.default_step.dependOn(&b.addInstallHeaderFile(
@@ -249,7 +255,13 @@ pub fn build(b: *std.Build) void {
     // const test_header = b.path("test/zpp-test.h");
     const lib_test = b.addTest(.{
         // .root_module = zpp,
-        .root_source_file = b.path("tests/test.zig"),
+        // .root_source_file = b.path("tests/test.zig"),
+        .root_module = b.createModule(.{
+            .root_source_file = b.path("tests/test.zig"),
+            .target = target,
+            // TODO only passes for debug and small builds
+            // .optimize = optimize,
+        }),
         .filters = bm.test_filters,
         // .test_runner = .{ .path = b.path("test_runner.zig"), .mode = .simple },
     });

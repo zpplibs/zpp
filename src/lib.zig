@@ -1,4 +1,8 @@
 const std = @import("std");
+const builtin = @import("builtin");
+const zig_version = builtin.zig_version;
+
+pub const ArrayList = if (zig_version.major == 0 and zig_version.minor == 14) std.ArrayList else std.array_list.Managed;
 
 const c = @cImport({
     @cInclude("zpp.h");
@@ -403,23 +407,29 @@ pub fn initFlexStdString(opts: struct {
 }
 
 // --------------------------------------------------
+// utils
+
+pub fn isZig14() bool {
+    return zig_version.major == 0 and zig_version.minor == 14;
+}
+
+// --------------------------------------------------
 // c calling to zig
 
 export fn zpp_array_list_u8_append_slice(
     list_ptr: ?*anyopaque,
     data: [*c]u8,
     data_len: usize,
-) callconv(.C) bool {
+) bool {
     if (list_ptr == null or data == null or data_len < 0) return false;
     if (data_len == 0) return true;
 
     // var list = @ptrCast(
-    //     *std.ArrayList(u8),
-    //     @alignCast(@alignOf(*std.ArrayList(u8)),
+    //     *ArrayList(u8),
+    //     @alignCast(@alignOf(*ArrayList(u8)),
     //     list_ptr,
     // ));
-
-    var list: *std.ArrayList(u8) = @ptrCast(@alignCast(list_ptr));
+    var list: *ArrayList(u8) = @ptrCast(@alignCast(list_ptr));
     list.appendSlice(data[0..data_len]) catch return false;
 
     return true;

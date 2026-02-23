@@ -6,7 +6,7 @@ const c = @cImport({
 });
 
 fn u8VerifyAppend(
-    list: *std.ArrayList(u8),
+    list: *zpp.ArrayList(u8),
     data: [:0]const u8,
     expect: []const u8,
 ) !void {
@@ -89,7 +89,7 @@ fn verifyStdString(buf: anytype) !void {
 }
 
 test "ArrayList.appendSlice from c" {
-    var buf = std.ArrayList(u8).init(std.testing.allocator);
+    var buf = zpp.ArrayList(u8).init(std.testing.allocator);
     defer buf.deinit();
 
     // explicity call so it would be included by the compiler
@@ -177,7 +177,7 @@ test "StdString small capacity" {
 
     const actual_capacity = buf.capacity();
 
-    var list = std.ArrayList(u8).init(std.testing.allocator);
+    var list = zpp.ArrayList(u8).init(std.testing.allocator);
     defer list.deinit();
 
     const to_append = "1234567890";
@@ -207,7 +207,7 @@ test "FlexStdString small capacity" {
 
     const actual_capacity = buf.capacity();
 
-    var list = std.ArrayList(u8).init(std.testing.allocator);
+    var list = zpp.ArrayList(u8).init(std.testing.allocator);
     defer list.deinit();
 
     const to_append = "1234567890";

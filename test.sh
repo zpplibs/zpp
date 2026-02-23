@@ -18,11 +18,15 @@ fi
 
 cd $SCRIPT_DIR
 
+[ -z "$ZIG_BIN" ] && ZIG_BIN=zig
+
+echo "ZIG_BIN=$ZIG_BIN"
+
 echo '\n# ==================================================\n# debug\n' && \
-zig build test $@ && \
+$ZIG_BIN build test $@
 echo '\n# ==================================================\n# safe\n' && \
-zig build -Doptimize=ReleaseSafe test $@ && \
+$ZIG_BIN build -Doptimize=ReleaseSafe test $@
 echo '\n# ==================================================\n# small\n' && \
-zig build -Doptimize=ReleaseSmall test $@ && \
+$ZIG_BIN build -Doptimize=ReleaseSmall test $@
 echo '\n# ==================================================\n# fast\n' && \
-zig build -Doptimize=ReleaseFast test $@
+$ZIG_BIN build -Doptimize=ReleaseFast test $@
