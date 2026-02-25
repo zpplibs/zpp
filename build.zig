@@ -180,6 +180,17 @@ pub fn build(b: *std.Build) void {
             "the app version",
         ) orelse parseGitRevHead(b.allocator) catch "master",
     );
+    const lib_only = b.option(
+        bool,
+        "lib_only",
+        "whether to configure lib only for the build",
+    ) orelse false;
+    const test_rel_opt = b.option(
+        std.builtin.OptimizeMode,
+        "test_rel_opt",
+        "release optimize mode to use for the test sources",
+    ) orelse .Debug;
+
     const bm: BuildModule = .{
         .b = b,
         .tests = b.step("test", "Run all tests"),
@@ -233,6 +244,8 @@ pub fn build(b: *std.Build) void {
     // ).step);
     b.installArtifact(lib);
 
+    if (lib_only) return;
+
     // ======================================================================
     // module
 
@@ -260,7 +273,7 @@ pub fn build(b: *std.Build) void {
             .root_source_file = b.path("tests/test.zig"),
             .target = target,
             // TODO only passes for debug and small builds
-            // .optimize = optimize,
+            .optimize = if (optimize == .Debug) .Debug else test_rel_opt,
         }),
         .filters = bm.test_filters,
         // .test_runner = .{ .path = b.path("test_runner.zig"), .mode = .simple },

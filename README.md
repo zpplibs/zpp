@@ -9,4 +9,6 @@ zig + c/cpp interop utils
 ### Running the tests
 ```sh
 ./test.sh
+# or
+./test.sh -Dtest_rel_opt=ReleaseSmall
 ```
