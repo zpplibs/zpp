@@ -244,8 +244,6 @@ pub fn build(b: *std.Build) void {
     // ).step);
     b.installArtifact(lib);
 
-    if (lib_only) return;
-
     // ======================================================================
     // module
 
@@ -261,6 +259,8 @@ pub fn build(b: *std.Build) void {
         .target = target,
         .optimize = optimize,
     }).createModule());
+
+    if (lib_only) return;
 
     // ======================================================================
     // tests
