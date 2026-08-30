@@ -98,7 +98,7 @@ test "ArrayList.appendSlice from c" {
     try u8VerifyAppend(&buf, "foo", "foo");
     try u8VerifyAppend(&buf, "bar", "foobar");
 
-    std.debug.print("ok\n", .{});
+    std.log.debug("ok\n", .{});
 }
 
 test "StdString api" {
@@ -116,7 +116,7 @@ test "StdString api" {
     const actual_capacity = buf.capacity();
     try verifyStdString(&buf);
 
-    std.debug.print(
+    std.log.debug(
         "ok\n  - capacity default: {}, min: {}, actual: {}\n",
         .{ def.capacity(), min_capacity, actual_capacity },
     );
@@ -145,7 +145,7 @@ test "FlexStdString api" {
     const actual_capacity = buf.capacity();
     try verifyStdString(&buf);
 
-    std.debug.print(
+    std.log.debug(
         "ok\n  - capacity min: {}, actual: {}\n",
         .{ capacity, actual_capacity },
     );
@@ -162,7 +162,7 @@ test "FixedStdString api" {
     try std.testing.expect(capacity == buf.capacity());
     try verifyStdString(&buf);
 
-    std.debug.print(
+    std.log.debug(
         "ok\n  - capacity: {}\n",
         .{capacity},
     );
@@ -192,7 +192,7 @@ test "StdString small capacity" {
         try std.testing.expectEqualSlices(u8, l_items, b_items);
     }
 
-    std.debug.print(
+    std.log.debug(
         "ok\n  - capacity min: {}, actual: {}, current: {}\n",
         .{ min_capacity, actual_capacity, buf.capacity() },
     );
@@ -219,11 +219,11 @@ test "FlexStdString small capacity" {
         const b_items = buf.items();
         const l_items = list.items;
 
-        //std.debug.print("\niteration: {}\n{s}\n{s}\n", .{ i, b_items, l_items });
+        //std.log.debug("\niteration: {}\n{s}\n{s}\n", .{ i, b_items, l_items });
         try std.testing.expectEqualSlices(u8, l_items, b_items);
     }
 
-    std.debug.print(
+    std.log.debug(
         "ok\n  - capacity min: {}, actual: {}, current: {}\n",
         .{ min_capacity, actual_capacity, buf.capacity() },
     );
@@ -241,7 +241,7 @@ test "FixedStdString.appendSlice overflow" {
     try buf.appendSlice(to_append);
     buf.appendSlice(to_append) catch |e| {
         try std.testing.expect(e == zpp.StdStringError.Append);
-        std.debug.print("ok\n", .{});
+        std.log.debug("ok\n", .{});
         return;
     };
     try std.testing.expect(false);

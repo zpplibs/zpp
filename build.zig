@@ -1,4 +1,6 @@
 const std = @import("std");
+const builtin = @import("builtin");
+const zig_version = builtin.zig_version;
 
 const SourceType = struct {
     with_exe: bool,
@@ -67,6 +69,7 @@ fn addModuleTo(
     comptime run_name: []const u8,
 ) *std.Build.Module {
     const is_zig = std.mem.endsWith(u8, root_src, ".zig");
+    const is_c = !is_zig and std.mem.endsWith(u8, root_src, ".c");
 
     if (!source_type.with_test and !source_type.with_exe) @panic("Must atleast be exe or test.");
     if (!is_zig and source_type.with_test) @panic("Tests can only be in .zig files");
@@ -83,33 +86,29 @@ fn addModuleTo(
         },
         .target = bm.target,
         .optimize = bm.optimize,
+        .link_libc = is_c,
+        .link_libcpp = !is_c and !is_zig,
     });
 
     if (is_zig) {
         mod.addImport("build_options", bm.build_options);
     }
     if (source_type.with_exe) {
-        const exe_name = if (bm.optimize == .ReleaseFast) name else concat(b, name ++ "--", optimize_names[bm.optimize_idx], name);
-        const exe = b.addExecutable(.{
-            .name = exe_name,
-            .root_module = mod,
-        });
-
         if (!is_zig) {
-            const is_c = std.mem.endsWith(u8, root_src, ".c");
-            exe.addCSourceFile(.{
+            mod.addCSourceFile(.{
                 .file = .{ .src_path = .{
                     .owner = b,
                     .sub_path = root_src,
                 } },
                 .flags = if (is_c) c_flags else cpp_flags,
             });
-            if (is_c) {
-                exe.linkLibC();
-            } else {
-                exe.linkLibCpp();
-            }
         }
+
+        const exe_name = if (bm.optimize == .ReleaseFast) name else concat(b, name ++ "--", optimize_names[bm.optimize_idx], name);
+        const exe = b.addExecutable(.{
+            .name = exe_name,
+            .root_module = mod,
+        });
         const run_cmd = b.addRunArtifact(exe);
         run_cmd.step.dependOn(b.getInstallStep());
         if (b.args) |args| run_cmd.addArgs(args);
@@ -142,7 +141,16 @@ fn addModuleTo(
     return mod;
 }
 
-pub fn parseGitRevHead(a: std.mem.Allocator) ![]const u8 {
+pub fn parseGitRevHead(b: *std.Build, a: std.mem.Allocator) ![]const u8 {
+    if (zig_version.major != 0 or zig_version.minor >= 16) {
+        const args = [_][]const u8{ "git", "rev-parse", "HEAD" };
+        const result = try std.process.run(a, b.graph.io, .{
+            .argv = &args,
+        });
+        // defer b.allocator.free(result.stdout);
+        // defer b.allocator.free(result.stderr);
+        return std.mem.trim(u8, result.stdout, "\n");
+    }
     var child = std.process.Child.init(
         &.{ "git", "rev-parse", "HEAD" },
         a,
@@ -178,7 +186,7 @@ pub fn build(b: *std.Build) void {
             []const u8,
             "version",
             "the app version",
-        ) orelse parseGitRevHead(b.allocator) catch "master",
+        ) orelse parseGitRevHead(b, b.allocator) catch "master",
     );
     const lib_only = b.option(
         bool,
@@ -279,8 +287,8 @@ pub fn build(b: *std.Build) void {
         // .test_runner = .{ .path = b.path("test_runner.zig"), .mode = .simple },
     });
     lib_test.root_module.addImport("zpp", mod);
-    lib_test.linkLibrary(lib);
-    lib_test.addIncludePath(b.path("tests"));
+    lib_test.root_module.linkLibrary(lib);
+    lib_test.root_module.addIncludePath(b.path("tests"));
 
     // lib_test.addImport("zpp_testlib", b.addTranslateC(.{
     //     .root_source_file = test_header,
