@@ -27,17 +27,19 @@ fn printInfo() void {
     });
 }
 pub fn main() !void {
-    var gpa = std.heap.GeneralPurposeAllocator(.{}){};
-    defer _ = gpa.deinit();
-    const a = gpa.allocator();
+    // var gpa = std.heap.GeneralPurposeAllocator(.{}){};
+    // defer _ = gpa.deinit();
+    // const a = gpa.allocator();
+    // const a = std.heap.c_allocator;
 
-    const allocArgs = try std.process.argsAlloc(a);
-    defer std.process.argsFree(a, allocArgs);
-    const args = allocArgs[1..];
-    try run(args);
+    // const allocArgs = try std.process.argsAlloc(a);
+    // defer std.process.argsFree(a, allocArgs);
+    // const args = allocArgs[1..];
+    // try run(args);
+    try run(&.{ "hello", "world" });
 }
 
-fn run(args: [][:0]u8) !void {
+fn run(args: []const [:0]const u8) !void {
     printInfo();
     var def = zpp.initStdString(.{
         .min_capacity = 0,
