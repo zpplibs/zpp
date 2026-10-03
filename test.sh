@@ -23,10 +23,10 @@ cd $SCRIPT_DIR
 echo "ZIG_BIN=$ZIG_BIN"
 
 echo '\n# ==================================================\n# debug\n' && \
-$ZIG_BIN build test $@
+$ZIG_BIN build -Doptimize=debug test $@
 echo '\n# ==================================================\n# safe\n' && \
-$ZIG_BIN build -Doptimize=ReleaseSafe test $@
+$ZIG_BIN build -Doptimize=safe test $@
 echo '\n# ==================================================\n# small\n' && \
-$ZIG_BIN build -Doptimize=ReleaseSmall test $@
+$ZIG_BIN build -Doptimize=small test $@
 echo '\n# ==================================================\n# fast\n' && \
-$ZIG_BIN build -Doptimize=ReleaseFast test $@
+$ZIG_BIN build -Doptimize=fast test $@

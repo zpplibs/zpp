@@ -1,12 +1,9 @@
 const std = @import("std");
+const c = @import("c");
 const builtin = @import("builtin");
 const zig_version = builtin.zig_version;
 
 pub const ArrayList = if (zig_version.major == 0 and zig_version.minor == 14) std.ArrayList else std.array_list.Managed;
-
-const c = @cImport({
-    @cInclude("zpp.h");
-});
 
 // const empty_array: [0]u8 = undefined;
 // const empty_slice = empty_array[0..];

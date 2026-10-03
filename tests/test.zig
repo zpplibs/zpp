@@ -1,9 +1,6 @@
 const std = @import("std");
 const zpp = @import("zpp");
-
-const c = @cImport({
-    @cInclude("zpp-test.h");
-});
+const c = @import("c");
 
 fn u8VerifyAppend(
     list: *zpp.ArrayList(u8),

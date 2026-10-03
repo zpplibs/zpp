@@ -1,4 +1,5 @@
 const std = @import("std");
+const translate_c = @import("translate_c");
 const builtin = @import("builtin");
 const zig_version = builtin.zig_version;
 
@@ -14,20 +15,22 @@ const BuildModule = struct {
     b: *std.Build,
     tests: *std.Build.Step,
     target: std.Build.ResolvedTarget,
-    optimize: std.builtin.OptimizeMode,
+    optimize: std.lang.Optimize,
     optimize_idx: usize,
     // extra
     build_options: *std.Build.Module,
     test_filters: []const []const u8,
 };
 
-const optimize_names = blk: {
-    // const fields = @typeInfo(std.builtin.OptimizeMode).Enum.fields;
-    const fields = std.meta.fields(std.builtin.OptimizeMode);
-    var names: [fields.len][]const u8 = undefined;
-    for (fields, 0..) |field, i| names[i] = field.name;
-    break :blk names;
-};
+// const optimize_names = blk: {
+//     // const fields = @typeInfo(std.builtin.OptimizeMode).Enum.fields;
+//     const fields = std.meta.fields(std.builtin.OptimizeMode);
+//     var names: [fields.len][]const u8 = undefined;
+//     for (fields, 0..) |field, i| names[i] = field.name;
+//     break :blk names;
+// };
+
+const optimize_names = @typeInfo(std.lang.Optimize).@"enum".field_names;
 
 const common_flags = &[_][]const u8{
     "-Wall",
@@ -104,14 +107,15 @@ fn addModuleTo(
             });
         }
 
-        const exe_name = if (bm.optimize == .ReleaseFast) name else concat(b, name ++ "--", optimize_names[bm.optimize_idx], name);
+        const exe_name = if (bm.optimize == .fast) name else concat(b, name ++ "--", optimize_names[bm.optimize_idx], name);
         const exe = b.addExecutable(.{
             .name = exe_name,
             .root_module = mod,
         });
         const run_cmd = b.addRunArtifact(exe);
         run_cmd.step.dependOn(b.getInstallStep());
-        if (b.args) |args| run_cmd.addArgs(args);
+        //if (b.args) |args| run_cmd.addArgs(args);
+        run_cmd.addPassthruArgs();
 
         b.step(
             if (run_name.len != 0) run_name else "run:" ++ name,
@@ -194,10 +198,10 @@ pub fn build(b: *std.Build) void {
         "whether to configure lib only for the build",
     ) orelse false;
     const test_rel_opt = b.option(
-        std.builtin.OptimizeMode,
+        std.lang.Optimize,
         "test_rel_opt",
         "release optimize mode to use for the test sources",
-    ) orelse .Debug;
+    ) orelse .debug;
 
     const bm: BuildModule = .{
         .b = b,
@@ -215,8 +219,21 @@ pub fn build(b: *std.Build) void {
 
     // ======================================================================
     // deps
+    // https://codeberg.org/ziglang/translate-c#options
+    const dep_translate_c = b.dependency("translate_c", .{});
 
-    // no zig.zon deps
+    const translate_zpp_h: translate_c.Translator = .init(dep_translate_c, .{
+        .c_source_file = b.path("include/zpp.h"),
+        .target = target,
+        .optimize = optimize,
+    });
+
+    const translate_zpp_test_h: translate_c.Translator = .init(dep_translate_c, .{
+        .c_source_file = b.path("tests/zpp-test.h"),
+        .target = target,
+        .optimize = optimize,
+    });
+    translate_zpp_test_h.addIncludePath(b.path("include"));
 
     // ======================================================================
     // cpp lib
@@ -260,13 +277,9 @@ pub fn build(b: *std.Build) void {
         .target = target,
         .optimize = optimize,
     });
+    mod.addImport("c", translate_zpp_h.mod);
 
     mod.linkLibrary(lib);
-    mod.addImport("zpp_clib", b.addTranslateC(.{
-        .root_source_file = lib_header,
-        .target = target,
-        .optimize = optimize,
-    }).createModule());
 
     if (lib_only) return;
 
@@ -281,12 +294,14 @@ pub fn build(b: *std.Build) void {
             .root_source_file = b.path("tests/test.zig"),
             .target = target,
             // TODO only passes for debug and small builds
-            .optimize = if (optimize == .Debug) .Debug else test_rel_opt,
+            .optimize = if (optimize == .debug) .debug else test_rel_opt,
         }),
         .filters = bm.test_filters,
         // .test_runner = .{ .path = b.path("test_runner.zig"), .mode = .simple },
     });
+    lib_test.root_module.addImport("c", translate_zpp_test_h.mod);
     lib_test.root_module.addImport("zpp", mod);
+
     lib_test.root_module.linkLibrary(lib);
     lib_test.root_module.addIncludePath(b.path("tests"));
 

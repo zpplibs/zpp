@@ -26,7 +26,7 @@ fn printInfo() void {
         info.suffix,
     });
 }
-pub fn main() !void {
+pub fn main(init: std.process.Init) !void {
     // var gpa = std.heap.GeneralPurposeAllocator(.{}){};
     // defer _ = gpa.deinit();
     // const a = gpa.allocator();
@@ -36,7 +36,10 @@ pub fn main() !void {
     // defer std.process.argsFree(a, allocArgs);
     // const args = allocArgs[1..];
     // try run(args);
-    try run(&.{ "hello", "world" });
+
+    //try run(&.{ "hello", "world" });
+    const args = try init.minimal.args.toSlice(init.arena.allocator());
+    try run(args[1..]);
 }
 
 fn run(args: []const [:0]const u8) !void {
@@ -52,8 +55,10 @@ fn run(args: []const [:0]const u8) !void {
     });
     defer buf.deinit();
 
-    for (args) |arg| {
-        try buf.appendSlice(arg);
+    if (0 == args.len) {
+        try buf.appendSlice("hello");
+    } else {
+        for (args) |arg| try buf.appendSlice(arg);
     }
 
     const actual_capacity = buf.capacity();
